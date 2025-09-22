@@ -6,16 +6,21 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // US border geo json from: https://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_040_00_500k.json
 // exclude: Alaska, Hawaii, Puerto Rico
 
-export default function MapView() {
+export default function MapView({ onSelect }) {
   const handleMapClick = (event) => {
     const features = event.target.queryRenderedFeatures(event.point, {
       layers: ['us-fill']
     });
     
-    // 只有當點擊到 US states 區域時才顯示經緯度
+    // 只有當點擊到 US states 區域時才傳遞資料到面板
     if (features.length > 0) {
       const { lng, lat } = event.lngLat;
-      alert(`經度: ${lng.toFixed(6)}\n緯度: ${lat.toFixed(6)}`);
+      const stateName = features[0].properties.NAME || 'Unknown State';
+      
+      // 將資料傳遞給父組件
+      if (onSelect) {
+        onSelect({ lng, lat, stateName });
+      }
     }
   };
 
@@ -23,7 +28,7 @@ export default function MapView() {
     <Map
       initialViewState={{ longitude: -95.7, latitude: 37.1, zoom: 3.6 }}
       style={{ width: "100vw", height: "100vh" }}
-      mapStyle="https://tiles.openfreemap.org/styles/positron"
+      mapStyle="https://tiles.openfreemap.org/styles/liberty"
       maxBounds={[
         [-150, 15], // SW
         [-65, 57],  // NE
@@ -42,7 +47,7 @@ export default function MapView() {
         source="world-mask"
         paint={{
             "fill-color": "#000000",
-            "fill-opacity": 0.17
+            "fill-opacity": 0.15
         }}
         />
 
@@ -53,7 +58,7 @@ export default function MapView() {
         source="us-states"
         paint={{
             "fill-color": "#ffffff",
-            "fill-opacity": 0.25
+            "fill-opacity": 0.35
         }}
         />
         <Layer
