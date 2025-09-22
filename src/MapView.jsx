@@ -18,6 +18,20 @@ export default function MapView({ onSelect }) {
       const { lng, lat } = event.lngLat;
       const stationName = stationFeature.properties.name;
       const provider = stationFeature.properties.provider;
+      let sensors = stationFeature.properties.sensors || []; // 取得 sensors 資料
+      
+      // 確保 sensors 是陣列，如果是字串則解析 JSON
+      if (typeof sensors === 'string') {
+        try {
+          sensors = JSON.parse(sensors);
+        } catch (error) {
+          console.error('Failed to parse sensors from GeoJSON:', error);
+          sensors = [];
+        }
+      }
+      
+      console.log('Station clicked:', stationName, 'Sensors:', sensors); // Debug 用
+      console.log('Sensors type in MapView:', typeof sensors, 'Is array:', Array.isArray(sensors)); // Debug
       
       if (onSelect) {
         onSelect({ 
@@ -26,6 +40,7 @@ export default function MapView({ onSelect }) {
           stateName: 'Air Quality Station',
           stationName,
           provider,
+          sensors, // 傳遞 sensors 資料
           isStation: true
         });
       }
