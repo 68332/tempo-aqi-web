@@ -35,7 +35,7 @@ export default function InfoPanel({ open, data, onClose }) {
         }),
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
         backdropFilter: 'blur(8px)',
-        borderRadius: 2,
+        borderRadius: 5,
         zIndex: 10,
         display: 'flex',
         flexDirection: 'column'
@@ -66,11 +66,16 @@ export default function InfoPanel({ open, data, onClose }) {
           <Box>
             <Box sx={{ mb: 2 }}>
               <Typography variant="caption" color="text.secondary">
-                State
+                {data.isStation ? 'Station' : 'State'}
               </Typography>
               <Typography variant="h6" fontWeight="600">
-                {data.stateName}
+                {data.isStation ? data.stationName : data.stateName}
               </Typography>
+              {data.isStation && data.provider && (
+                <Typography variant="body2" color="text.secondary">
+                  Provider: {data.provider}
+                </Typography>
+              )}
             </Box>
 
             <Grid container spacing={1} sx={{ mb: 2 }}>

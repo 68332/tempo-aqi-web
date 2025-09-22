@@ -9,17 +9,37 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 export default function MapView({ onSelect }) {
   const handleMapClick = (event) => {
     const features = event.target.queryRenderedFeatures(event.point, {
-      layers: ['us-fill']
+      layers: ['us-fill', 'us-stations-points']
     });
     
-    // 只有當點擊到 US states 區域時才傳遞資料到面板
-    if (features.length > 0) {
+    // 優先檢查是否點擊到監測站
+    const stationFeature = features.find(f => f.layer.id === 'us-stations-points');
+    if (stationFeature) {
       const { lng, lat } = event.lngLat;
-      const stateName = features[0].properties.NAME || 'Unknown State';
+      const stationName = stationFeature.properties.name;
+      const provider = stationFeature.properties.provider;
       
-      // 將資料傳遞給父組件
       if (onSelect) {
-        onSelect({ lng, lat, stateName });
+        onSelect({ 
+          lng, 
+          lat, 
+          stateName: 'Air Quality Station',
+          stationName,
+          provider,
+          isStation: true
+        });
+      }
+      return;
+    }
+    
+    // 如果沒點到監測站，檢查是否點擊到州
+    const stateFeature = features.find(f => f.layer.id === 'us-fill');
+    if (stateFeature) {
+      const { lng, lat } = event.lngLat;
+      const stateName = stateFeature.properties.NAME || 'Unknown State';
+      
+      if (onSelect) {
+        onSelect({ lng, lat, stateName, isStation: false });
       }
     }
   };
@@ -68,6 +88,28 @@ export default function MapView({ onSelect }) {
         paint={{
             "line-color": "#7c7c7cff",
             "line-width": 1
+        }}
+        />
+
+        {/* OpenAQ 監測站 */}
+        <Source id="us-stations" type="geojson" data="/data/openaq-us-stations.geojson" />
+        <Layer
+        id="us-stations-points"
+        type="circle"
+        source="us-stations"
+        paint={{
+            "circle-radius": [
+              "interpolate",
+              ["linear"],
+              ["zoom"],
+              3, 3,
+              8, 6,
+              15, 12
+            ],
+            "circle-color": "#8B5CF6",
+            "circle-stroke-color": "#FFFFFF",
+            "circle-stroke-width": 1,
+            "circle-opacity": 0.8
         }}
         />
     </Map>
