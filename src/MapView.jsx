@@ -7,17 +7,30 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // exclude: Alaska, Hawaii, Puerto Rico
 
 export default function MapView() {
+  const handleMapClick = (event) => {
+    const features = event.target.queryRenderedFeatures(event.point, {
+      layers: ['us-fill']
+    });
+    
+    // 只有當點擊到 US states 區域時才顯示經緯度
+    if (features.length > 0) {
+      const { lng, lat } = event.lngLat;
+      alert(`經度: ${lng.toFixed(6)}\n緯度: ${lat.toFixed(6)}`);
+    }
+  };
+
   return (
     <Map
       initialViewState={{ longitude: -95.7, latitude: 37.1, zoom: 3.6 }}
       style={{ width: "100vw", height: "100vh" }}
-      mapStyle="https://tiles.openfreemap.org/styles/bright"
+      mapStyle="https://tiles.openfreemap.org/styles/positron"
       maxBounds={[
         [-150, 15], // SW
         [-65, 57],  // NE
       ]}
       minZoom={3}
       maxZoom={15}
+      onClick={handleMapClick}
     >
       {/* 把 us-states.geojson 加進來 */}
       <Source id="us-states" type="geojson" data="/data/us-states.geojson" />
