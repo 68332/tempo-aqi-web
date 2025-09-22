@@ -13,10 +13,10 @@ export default function MapView() {
       style={{ width: "100vw", height: "100vh" }}
       mapStyle="https://tiles.openfreemap.org/styles/bright"
       maxBounds={[
-        [-130, 20], // SW
-        [-65, 52],  // NE
+        [-150, 15], // SW
+        [-65, 57],  // NE
       ]}
-      minZoom={4}
+      minZoom={3}
       maxZoom={15}
     >
       {/* 把 us-states.geojson 加進來 */}
