@@ -10,10 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@turf/mask": "^7.2.0",
+    "@turf/union": "^7.2.0",
+    "@vis.gl/react-maplibre": "^8.0.4",
     "maplibre-gl": "^5.7.3",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "react-map-gl": "^8.0.4"
+    "react-dom": "^19.1.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
