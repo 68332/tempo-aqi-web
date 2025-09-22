@@ -7,7 +7,14 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // exclude: Alaska, Hawaii, Puerto Rico
 
 export default function MapView({ onSelect }) {
+  // 管理標記狀態
+  const [clickMarker, setClickMarker] = React.useState(null);
   const handleMapClick = (event) => {
+    const { lng, lat } = event.lngLat;
+    
+    // 設定紅色標記位置
+    setClickMarker({ lng, lat });
+    
     const features = event.target.queryRenderedFeatures(event.point, {
       layers: ['us-fill', 'us-stations-points']
     });
@@ -18,6 +25,7 @@ export default function MapView({ onSelect }) {
       const { lng, lat } = event.lngLat;
       const stationName = stationFeature.properties.name;
       const provider = stationFeature.properties.provider;
+      const timezone = stationFeature.properties.timezone;
       let sensors = stationFeature.properties.sensors || []; // 取得 sensors 資料
       
       // 確保 sensors 是陣列，如果是字串則解析 JSON
@@ -40,6 +48,7 @@ export default function MapView({ onSelect }) {
           stateName: 'Air Quality Station',
           stationName,
           provider,
+          timezone,
           sensors, // 傳遞 sensors 資料
           isStation: true
         });
@@ -127,6 +136,62 @@ export default function MapView({ onSelect }) {
             "circle-opacity": 0.8
         }}
         />
+
+        {/* 點擊標記 */}
+        {clickMarker && (
+          <Source 
+            id="click-marker" 
+            type="geojson" 
+            data={{
+              type: "FeatureCollection",
+              features: [{
+                type: "Feature",
+                geometry: {
+                  type: "Point",
+                  coordinates: [clickMarker.lng, clickMarker.lat]
+                },
+                properties: {}
+              }]
+            }}
+          >
+            {/* 標記圓圈 */}
+            <Layer
+              id="click-marker-circle"
+              type="circle"
+              paint={{
+                "circle-radius": [
+                  "interpolate",
+                  ["linear"],
+                  ["zoom"],
+                  3, 8,
+                  8, 12,
+                  15, 20
+                ],
+                "circle-color": "#EF4444",
+                "circle-stroke-color": "#FFFFFF",
+                "circle-stroke-width": 2,
+                "circle-opacity": 0.9
+              }}
+            />
+            {/* 標記中心點 */}
+            <Layer
+              id="click-marker-center"
+              type="circle"
+              paint={{
+                "circle-radius": [
+                  "interpolate",
+                  ["linear"],
+                  ["zoom"],
+                  3, 2,
+                  8, 3,
+                  15, 5
+                ],
+                "circle-color": "#FFFFFF",
+                "circle-opacity": 1
+              }}
+            />
+          </Source>
+        )}
     </Map>
   );
 }

@@ -188,6 +188,11 @@ export default function InfoPanel({ open, data, onClose }) {
                   Provider: {data.provider}
                 </Typography>
               )}
+              {data.isStation && data.timezone && (
+                <Typography variant="body2" color="text.secondary">
+                  Timezone: {data.timezone}
+                </Typography>
+              )}
             </Box>
 
             <Grid container spacing={1} sx={{ mb: 2 }}>
