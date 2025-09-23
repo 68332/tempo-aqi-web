@@ -22,10 +22,12 @@ export default function InfoPanel({ open, data, onClose }) {
   
   // 當 data 改變且有 sensors 時，獲取 sensor 資料
   React.useEffect(() => {
-    if (data && data.sensors && data.sensors.length > 0) {
+    // 只有 OpenAQ 監測站才獲取 sensor 資料
+    if (data && data.stationType === 'OpenAQ' && data.sensors && data.sensors.length > 0) {
       console.log('Fetching data for sensors:', data.sensors); // Debug
       fetchSensorData(data.sensors);
     } else {
+      console.log('sensorData changed:', []); // Debug 用
       setSensorData([]);
     }
   }, [data]);
@@ -188,6 +190,16 @@ export default function InfoPanel({ open, data, onClose }) {
                   Provider: {data.provider}
                 </Typography>
               )}
+              {data.isStation && data.stationType && (
+                <Typography variant="body2" color="text.secondary">
+                  Station Type: {data.stationType}
+                </Typography>
+              )}
+              {data.isStation && data.instrument && (
+                <Typography variant="body2" color="text.secondary">
+                  Instrument: {data.instrument}
+                </Typography>
+              )}
               {data.isStation && data.timezone && (
                 <Typography variant="body2" color="text.secondary">
                   Timezone: {data.timezone}
@@ -278,6 +290,13 @@ export default function InfoPanel({ open, data, onClose }) {
                     <Typography variant="body2" color="text.secondary">
                       Station has {data.sensors.length} sensors. 
                       請在 InfoPanel.jsx 中設定 OpenAQ API key 來查看即時資料。
+                    </Typography>
+                  </Paper>
+                ) : data.stationType === 'Pandora' ? (
+                  <Paper variant="outlined" sx={{ p: 1.5, mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Pandora stations provide atmospheric composition data. 
+                      Real-time sensor data integration coming soon.
                     </Typography>
                   </Paper>
                 ) : (

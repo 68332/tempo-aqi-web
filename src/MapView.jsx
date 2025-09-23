@@ -16,10 +16,10 @@ export default function MapView({ onSelect }) {
     setClickMarker({ lng, lat });
     
     const features = event.target.queryRenderedFeatures(event.point, {
-      layers: ['us-fill', 'us-stations-points']
+      layers: ['us-fill', 'us-stations-points', 'pandora-stations-points']
     });
     
-    // 優先檢查是否點擊到監測站
+    // 優先檢查是否點擊到 OpenAQ 監測站
     const stationFeature = features.find(f => f.layer.id === 'us-stations-points');
     if (stationFeature) {
       const { lng, lat } = event.lngLat;
@@ -50,7 +50,35 @@ export default function MapView({ onSelect }) {
           provider,
           timezone,
           sensors, // 傳遞 sensors 資料
-          isStation: true
+          isStation: true,
+          stationType: 'OpenAQ'
+        });
+      }
+      return;
+    }
+    
+    // 檢查是否點擊到 Pandora 監測站
+    const pandoraFeature = features.find(f => f.layer.id === 'pandora-stations-points');
+    if (pandoraFeature) {
+      const { lng, lat } = event.lngLat;
+      const stationName = pandoraFeature.properties.station;
+      const instrument = pandoraFeature.properties.instrument;
+      const provider = 'Pandora';
+      
+      console.log('Pandora station clicked:', stationName, 'Instrument:', instrument); // Debug 用
+      
+      if (onSelect) {
+        onSelect({ 
+          lng, 
+          lat, 
+          stateName: 'Pandora Station',
+          stationName,
+          provider,
+          instrument, // 傳遞 instrument 資訊
+          timezone: null, // Pandora 資料沒有 timezone
+          sensors: [], // Pandora 站點沒有即時 sensors 資料
+          isStation: true,
+          stationType: 'Pandora'
         });
       }
       return;
@@ -131,6 +159,28 @@ export default function MapView({ onSelect }) {
               15, 12
             ],
             "circle-color": "#8B5CF6",
+            "circle-stroke-color": "#FFFFFF",
+            "circle-stroke-width": 1,
+            "circle-opacity": 0.8
+        }}
+        />
+
+        {/* Pandora 監測站 */}
+        <Source id="pandora-stations" type="geojson" data="/data/pandora-stations.geojson" />
+        <Layer
+        id="pandora-stations-points"
+        type="circle"
+        source="pandora-stations"
+        paint={{
+            "circle-radius": [
+              "interpolate",
+              ["linear"],
+              ["zoom"],
+              3, 3,
+              8, 6,
+              15, 12
+            ],
+            "circle-color": "#0066CC",
             "circle-stroke-color": "#FFFFFF",
             "circle-stroke-width": 1,
             "circle-opacity": 0.8
