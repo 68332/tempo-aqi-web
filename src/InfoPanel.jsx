@@ -15,11 +15,11 @@ import {
 export default function InfoPanel({ open, data, onClose }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
+
   // 狀態管理
   const [sensorData, setSensorData] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
-  
+
   // 當 data 改變且有 sensors 時，獲取 sensor 資料
   React.useEffect(() => {
     if (data && data.sensors && data.sensors.length > 0) {
@@ -29,25 +29,25 @@ export default function InfoPanel({ open, data, onClose }) {
       setSensorData([]);
     }
   }, [data]);
-  
+
   // 獲取 sensor 資料的函數
   const fetchSensorData = async (sensors) => {
     setLoading(true);
-    
+
     // 直接在這裡設定你的 OpenAQ API key
     const API_KEY = 'f842213920405091f23318ca1a7880636ac843b7cb81f8e3985c41b17deb19f2'; // 請替換為你的實際 API key
-    
+
     if (!API_KEY || API_KEY === 'your-api-key-here') {
       console.error('請設定 OpenAQ API key');
       setSensorData([]);
       setLoading(false);
       return;
     }
-    
+
     try {
       // 確保 sensors 是陣列並限制只處理前 10 個 sensors 來避免 rate limit
       console.log('Sensors type:', typeof sensors, 'Is array:', Array.isArray(sensors));
-      
+
       let sensorsArray;
       if (Array.isArray(sensors)) {
         sensorsArray = sensors;
@@ -62,18 +62,18 @@ export default function InfoPanel({ open, data, onClose }) {
       } else {
         sensorsArray = [];
       }
-      
+
       console.log('Parsed sensorsArray:', sensorsArray);
       const limitedSensors = sensorsArray.slice(0, 10);
       console.log(`Processing ${limitedSensors.length} out of ${sensorsArray.length} sensors`);
-      
+
       if (limitedSensors.length === 0) {
         console.log('No sensors to process');
         setSensorData([]);
         setLoading(false);
         return;
       }
-      
+
       const promises = limitedSensors.map(async (sensor) => {
         try {
           // 使用代理路徑來避免 CORS 問題
@@ -108,7 +108,7 @@ export default function InfoPanel({ open, data, onClose }) {
           };
         }
       });
-      
+
       const results = await Promise.all(promises);
       console.log('API results:', results); // Debug
       console.log('Setting sensor data, length:', results.length); // Debug
@@ -222,7 +222,7 @@ export default function InfoPanel({ open, data, onClose }) {
                 <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
                   Sensor Data
                 </Typography>
-                
+
                 {loading ? (
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
                     <CircularProgress size={24} />
@@ -238,29 +238,29 @@ export default function InfoPanel({ open, data, onClose }) {
                     {sensorData.map((item, index) => (
                       <Paper key={index} variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <Chip 
-                            label={item.sensor.parameter_display_name || item.sensor.parameter_name} 
-                            size="small" 
-                            color="primary" 
+                          <Chip
+                            label={item.sensor.parameter_display_name || item.sensor.parameter_name}
+                            size="small"
+                            color="primary"
                             variant="outlined"
                           />
                         </Box>
-                        
+
                         {item.data ? (
                           <Box>
                             <Typography variant="h6" fontWeight="600">
                               {item.data.latest?.value} {item.sensor.parameter_units}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {item.data.latest?.datetime?.local ? 
-                                new Date(item.data.latest.datetime.local).toLocaleString() : 
+                              {item.data.latest?.datetime?.local ?
+                                new Date(item.data.latest.datetime.local).toLocaleString() :
                                 'No timestamp'
                               }
                             </Typography>
                             {item.data.summary && (
                               <Typography variant="caption" display="block" color="text.secondary">
-                                Avg: {item.data.summary.avg?.toFixed(2)} | 
-                                Min: {item.data.summary.min} | 
+                                Avg: {item.data.summary.avg?.toFixed(2)} |
+                                Min: {item.data.summary.min} |
                                 Max: {item.data.summary.max}
                               </Typography>
                             )}
@@ -276,7 +276,7 @@ export default function InfoPanel({ open, data, onClose }) {
                 ) : data.sensors && data.sensors.length > 0 ? (
                   <Paper variant="outlined" sx={{ p: 1.5, mb: 2 }}>
                     <Typography variant="body2" color="text.secondary">
-                      Station has {data.sensors.length} sensors. 
+                      Station has {data.sensors.length} sensors.
                       請在 InfoPanel.jsx 中設定 OpenAQ API key 來查看即時資料。
                     </Typography>
                   </Paper>
