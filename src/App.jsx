@@ -102,6 +102,19 @@ export default function App() {
           />
           <span>Pandora Stations</span>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div
+            style={{
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              backgroundColor: '#a8d36cff',
+              border: '1px solid #FFFFFF',
+              flexShrink: 0
+            }}
+          />
+          <span>TOLnet Stations</span>
+        </div>
       </div>
     </div>
   );

@@ -159,6 +159,28 @@ export default function MapView({ onSelect }) {
         }}
       />
 
+      {/* TOLNet 監測站 */}
+      <Source id="TOLNet-us-stations" type="geojson" data="/data/TOLnet-us-stations.geojson" />
+      <Layer
+        id="TOLNet-us-stations-points"
+        type="circle"
+        source="TOLNet-us-stations"
+        paint={{
+          "circle-radius": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            3, 3,
+            8, 6,
+            15, 12
+          ],
+          "circle-color": "#a8d36cff",
+          "circle-stroke-color": "#FFFFFF",
+          "circle-stroke-width": 1,
+          "circle-opacity": 0.8
+        }}
+      />
+
       {/* 點擊標記 */}
       {clickMarker && (
         <Source
