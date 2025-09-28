@@ -39,6 +39,129 @@ export default function MapView({ onSelect, resetToHome }) {
     };
   };
 
+  // 計算兩點之間的距離（公里）
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // 地球半徑（公里）
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // 找出範圍內的 OpenAQ 監測站並獲取指定污染物數據
+  const findNearbyStationsData = async (clickLat, clickLng, radiusKm = 10) => {
+    try {
+      // 獲取所有 OpenAQ 監測站的 GeoJSON 數據
+      const response = await fetch('/data/openaq-us-stations.geojson');
+      const geojsonData = await response.json();
+
+      // 找出範圍內的監測站
+      const nearbyStations = geojsonData.features.filter(feature => {
+        const [stationLng, stationLat] = feature.geometry.coordinates;
+        const distance = calculateDistance(clickLat, clickLng, stationLat, stationLng);
+        return distance <= radiusKm;
+      });
+
+      console.log(`Found ${nearbyStations.length} stations within ${radiusKm}km`);
+
+      // 目標污染物
+      const targetParameters = ['pm25', 'pm10', 'o3', 'co', 'so2', 'no2'];
+      const pollutantData = {};
+
+      // 初始化污染物數據結構
+      targetParameters.forEach(param => {
+        pollutantData[param] = {
+          values: [],
+          max: null,
+          stations: [],
+          unit: null
+        };
+      });
+
+            // OpenAQ API key
+      const API_KEY = 'f842213920405091f23318ca1a7880636ac843b7cb81f8e3985c41b17deb19f2';
+
+      // 收集所有監測站的 sensor 資料並獲取即時數據
+      for (const station of nearbyStations) {
+        let sensors = station.properties.sensors || [];
+        
+        // 確保 sensors 是陣列
+        if (typeof sensors === 'string') {
+          try {
+            sensors = JSON.parse(sensors);
+          } catch (error) {
+            console.error('Failed to parse sensors:', error);
+            continue;
+          }
+        }
+
+        // 遍歷該監測站的所有 sensors
+        for (const sensor of sensors) {
+          const paramName = sensor.parameter_name?.toLowerCase();
+          if (targetParameters.includes(paramName)) {
+            try {
+              // 調用 OpenAQ API 獲取即時數據
+              const response = await fetch(`/api/openaq/v3/sensors/${sensor.id}`, {
+                headers: {
+                  'x-api-key': API_KEY
+                }
+              });
+
+              if (response.ok) {
+                const result = await response.json();
+                const sensorData = result.results[0];
+                const latestValue = sensorData?.latest?.value;
+
+                if (latestValue !== null && latestValue !== undefined) {
+                  pollutantData[paramName].values.push(latestValue);
+                  pollutantData[paramName].stations.push({
+                    stationName: station.properties.name,
+                    sensorId: sensor.id,
+                    unit: sensor.parameter_units,
+                    value: latestValue,
+                    timestamp: sensorData?.latest?.datetime?.local
+                  });
+
+                  if (!pollutantData[paramName].unit) {
+                    pollutantData[paramName].unit = sensor.parameter_units;
+                  }
+                }
+              } else {
+                console.error(`Failed to fetch data for sensor ${sensor.id}:`, response.status);
+              }
+            } catch (error) {
+              console.error(`Error fetching sensor ${sensor.id}:`, error);
+            }
+          }
+        }
+      }
+
+      // 計算每種污染物的最大值
+      targetParameters.forEach(param => {
+        if (pollutantData[param].values.length > 0) {
+          pollutantData[param].max = Math.max(...pollutantData[param].values);
+        }
+      });
+
+      return {
+        nearbyStationsCount: nearbyStations.length,
+        pollutantData,
+        radiusKm
+      };
+
+    } catch (error) {
+      console.error('Error finding nearby stations:', error);
+      return {
+        nearbyStationsCount: 0,
+        pollutantData: {},
+        radiusKm
+      };
+    }
+  };
+
   // 重置到首頁視角的函數
   React.useEffect(() => {
     if (resetToHome && mapRef.current) {
@@ -80,7 +203,7 @@ export default function MapView({ onSelect, resetToHome }) {
     if (mapRef.current) {
       mapRef.current.flyTo({
         center: [lng, lat],
-        zoom: 10,
+        zoom: 9,
         duration: 2000, // 2秒動畫
         essential: true
       });
@@ -151,15 +274,37 @@ export default function MapView({ onSelect, resetToHome }) {
       return;
     }
 
-    // 如果沒點到監測站，檢查是否點擊到州
+    // 如果沒點到監測站，檢查是否點擊到州或其他區域
     const stateFeature = features.find(f => f.layer.id === 'us-fill');
-    if (stateFeature) {
+    if (stateFeature || !stationFeature) {
       const { lng, lat } = event.lngLat;
-      const stateName = stateFeature.properties.NAME || 'Unknown State';
+      const stateName = stateFeature?.properties.NAME || 'Unknown Location';
 
+      // 先顯示加載狀態
       if (onSelect) {
-        onSelect({ lng, lat, stateName, isStation: false });
+        onSelect({ 
+          lng, 
+          lat, 
+          stateName, 
+          isStation: false,
+          nearbyStationsData: null,
+          loadingNearbyData: true
+        });
       }
+
+      // 獲取10公里範圍內的監測站數據
+      findNearbyStationsData(lat, lng, 10).then(nearbyData => {
+        if (onSelect) {
+          onSelect({ 
+            lng, 
+            lat, 
+            stateName, 
+            isStation: false,
+            nearbyStationsData: nearbyData,
+            loadingNearbyData: false
+          });
+        }
+      });
     }
   };
 
@@ -286,7 +431,7 @@ export default function MapView({ onSelect, resetToHome }) {
             type="geojson"
             data={{
               type: "FeatureCollection",
-              features: [createCircle([clickMarker.lng, clickMarker.lat], 30)]
+              features: [createCircle([clickMarker.lng, clickMarker.lat], 10)]
             }}
           >
             <Layer
