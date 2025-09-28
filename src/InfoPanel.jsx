@@ -168,7 +168,18 @@ export default function InfoPanel({ open, data, onClose }) {
           display: 'flex',
           alignItems: 'center',
           borderBottom: 1,
-          borderColor: 'divider'
+          borderColor: 'divider',
+          cursor: 'pointer',
+          '&:hover': {
+            backgroundColor: 'rgba(117, 116, 116, 0.04)',
+          },
+          transition: 'backgroundColor 0.2s ease-in-out',
+        }}
+        onClick={() => {
+          // 清除選中的資料，回到首頁狀態
+          if (onClose) {
+            onClose();
+          }
         }}
       >
         <Box

@@ -6,6 +6,7 @@ import InfoPanel from './InfoPanel';
 export default function App() {
   const [selection, setSelection] = React.useState(null);
   const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 900);
+  const [resetToHome, setResetToHome] = React.useState(false);
   // selection: { lng, lat, stateName } | null
 
   React.useEffect(() => {
@@ -17,16 +18,24 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // 處理重置到首頁
+  const handleResetToHome = () => {
+    setSelection(null);
+    setResetToHome(true);
+    // 重置標記，確保下次可以再次觸發
+    setTimeout(() => setResetToHome(false), 100);
+  };
+
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
       {/* 地圖：把點擊結果丟回來 */}
-      <MapView onSelect={setSelection} />
+      <MapView onSelect={setSelection} resetToHome={resetToHome} />
 
       {/* 右側資訊面板（浮在地圖上） */}
       <InfoPanel
         open={!!selection}
         data={selection}
-        onClose={() => setSelection(null)}
+        onClose={handleResetToHome}
       />
 
       {/* Footer */}

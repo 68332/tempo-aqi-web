@@ -6,10 +6,28 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // US border geo json from: https://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_040_00_500k.json
 // exclude: Alaska, Hawaii, Puerto Rico
 
-export default function MapView({ onSelect }) {
+export default function MapView({ onSelect, resetToHome }) {
   // 管理標記狀態和地圖引用
   const [clickMarker, setClickMarker] = React.useState(null);
   const mapRef = React.useRef(null);
+
+  // 初始視角設定
+  const initialViewState = { longitude: -95.7, latitude: 37.1, zoom: 3.6 };
+
+  // 重置到首頁視角的函數
+  React.useEffect(() => {
+    if (resetToHome && mapRef.current) {
+      // 清除點擊標記
+      setClickMarker(null);
+      // 平滑飛行回到初始視角
+      mapRef.current.flyTo({
+        center: [initialViewState.longitude, initialViewState.latitude],
+        zoom: initialViewState.zoom,
+        duration: 2000, // 2秒動畫
+        essential: true
+      });
+    }
+  }, [resetToHome]);
 
   const handleMapClick = (event) => {
     const { lng, lat } = event.lngLat;
@@ -47,8 +65,8 @@ export default function MapView({ onSelect }) {
       if (mapRef.current) {
         mapRef.current.flyTo({
           center: [lng, lat],
-          zoom: 12,
-          duration: 2000, // 2秒動畫
+          zoom: 15,
+          duration: 2500, // 2秒動畫
           essential: true
         });
       }
@@ -121,7 +139,7 @@ export default function MapView({ onSelect }) {
   return (
     <Map
       ref={mapRef}
-      initialViewState={{ longitude: -95.7, latitude: 37.1, zoom: 3.6 }}
+      initialViewState={initialViewState}
       style={{ width: "100vw", height: "100vh" }}
       mapStyle="https://tiles.openfreemap.org/styles/liberty"
       maxBounds={[
