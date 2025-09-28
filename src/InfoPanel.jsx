@@ -19,6 +19,12 @@ export default function InfoPanel({ open, data, onClose }) {
   // 狀態管理
   const [sensorData, setSensorData] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
+  const [titleKey, setTitleKey] = React.useState(0);
+
+  // 當 data 改變時觸發標題動畫
+  React.useEffect(() => {
+    setTitleKey(prev => prev + 1);
+  }, [!!data]);
 
   // 當 data 改變且有 sensors 時，獲取 sensor 資料
   React.useEffect(() => {
@@ -165,17 +171,85 @@ export default function InfoPanel({ open, data, onClose }) {
           borderColor: 'divider'
         }}
       >
-        <Typography variant="h6" component="h2" fontWeight="bold">
-          AirCast
+        <Box
+          sx={{
+            width: 15,
+            height: 15,
+            borderRadius: '50%',
+            backgroundColor: '#22C55E',
+            mr: 1.5,
+            animation: 'pulse 2s infinite',
+            '@keyframes pulse': {
+              '0%': {
+                opacity: 1,
+                transform: 'scale(1)',
+              },
+              '50%': {
+                opacity: 0.5,
+                transform: 'scale(1.2)',
+              },
+              '100%': {
+                opacity: 1,
+                transform: 'scale(1)',
+              },
+            },
+          }}
+        />
+        <Typography 
+          key={titleKey}
+          variant="h6" 
+          component="h2" 
+          fontWeight="bold"
+          sx={{
+            animation: 'fadeInText 0.6s ease-in-out',
+            '@keyframes fadeInText': {
+              '0%': {
+                opacity: 0,
+                transform: 'translateY(0px)',
+              },
+              '100%': {
+                opacity: 1,
+                transform: 'translateY(0)',
+              },
+            },
+          }}
+        >
+          {!data ? 'Hi, Welcome to AirCast!' : 'AirCast'}
         </Typography>
       </Box>
 
       {/* Body */}
       <Box sx={{ p: 2, flexGrow: 1, overflowY: 'auto' }}>
         {!data ? (
-          <Typography variant="body2" color="text.secondary">
-            Click within the United States to see details.
-          </Typography>
+          <Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              AirCast is a web-based platform that forecasts and visualizes air quality across the United States. By combining satellite observations, ground-based measurements, and atmospheric networks, AirCast provides a unified view of air pollution to support public health and decision-making.
+            </Typography>
+            
+            <Typography variant="subtitle2" fontWeight="600" sx={{ mb: 1 }}>
+              Data Sources
+            </Typography>
+            <Box sx={{ mb: 2, pl: 1 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                • <strong>NASA TEMPO</strong> - Satellite observations of air pollutants
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                • <strong>OpenAQ</strong> - Ground-based air quality monitoring network
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                • <strong>Pandora</strong> - Atmospheric composition measurement stations
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                • <strong>TOLNet</strong> - Tropospheric Ozone Lidar Network
+              </Typography>
+            </Box>
+            
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Click anywhere on the map to explore local air quality data from these monitoring stations.
+            </Typography>
+
+            <Divider sx={{ my: 2 }} />
+          </Box>
         ) : (
           <Box>
             <Box sx={{ mb: 2 }}>
