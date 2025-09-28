@@ -14,10 +14,35 @@ export default function MapView({ onSelect, resetToHome }) {
   // 初始視角設定
   const initialViewState = { longitude: -95.7, latitude: 37.1, zoom: 3.6 };
 
+  // 創建30公里半徑圓形的函數
+  const createCircle = (center, radiusInKm = 30) => {
+    const points = 64; // 圓形的點數
+    const coords = [];
+    const distanceX = radiusInKm / (111.32 * Math.cos(center[1] * Math.PI / 180));
+    const distanceY = radiusInKm / 110.54;
+
+    for (let i = 0; i < points; i++) {
+      const theta = (i / points) * (2 * Math.PI);
+      const x = distanceX * Math.cos(theta);
+      const y = distanceY * Math.sin(theta);
+      coords.push([center[0] + x, center[1] + y]);
+    }
+    coords.push(coords[0]); // 閉合圓形
+
+    return {
+      type: "Feature",
+      geometry: {
+        type: "Polygon",
+        coordinates: [coords]
+      },
+      properties: {}
+    };
+  };
+
   // 重置到首頁視角的函數
   React.useEffect(() => {
     if (resetToHome && mapRef.current) {
-      // 清除點擊標記
+      // 清除點擊標記和圓圈
       setClickMarker(null);
       // 平滑飛行回到初始視角
       mapRef.current.flyTo({
@@ -32,12 +57,34 @@ export default function MapView({ onSelect, resetToHome }) {
   const handleMapClick = (event) => {
     const { lng, lat } = event.lngLat;
 
-    // 設定紅色標記位置
-    setClickMarker({ lng, lat });
-
     const features = event.target.queryRenderedFeatures(event.point, {
       layers: ['us-fill', 'openaq-us-stations-points', 'pandora-us-stations-points'] // 只查詢這兩個圖層, 
     });
+
+    // 檢查是否點擊在美國境內（包括監測站或州區域）
+    const isInUSA = features.some(f => 
+      f.layer.id === 'us-fill' || 
+      f.layer.id === 'openaq-us-stations-points' || 
+      f.layer.id === 'pandora-us-stations-points'
+    );
+
+    // 如果點擊位置不在美國境內，就不執行任何操作
+    if (!isInUSA) {
+      return;
+    }
+
+    // 設定紅色標記位置
+    setClickMarker({ lng, lat });
+
+    // 不論點擊到什麼地方都要放大（僅限美國境內）
+    if (mapRef.current) {
+      mapRef.current.flyTo({
+        center: [lng, lat],
+        zoom: 10,
+        duration: 2000, // 2秒動畫
+        essential: true
+      });
+    }
 
     // 優先檢查是否點擊到監測站
     const stationFeature = features.find(f => f.layer.id === 'openaq-us-stations-points');
@@ -60,16 +107,6 @@ export default function MapView({ onSelect, resetToHome }) {
 
       console.log('Station clicked:', stationName, 'Sensors:', sensors); // Debug 用
       console.log('Sensors type in MapView:', typeof sensors, 'Is array:', Array.isArray(sensors)); // Debug
-
-      // 平滑飛行到監測站位置
-      if (mapRef.current) {
-        mapRef.current.flyTo({
-          center: [lng, lat],
-          zoom: 15,
-          duration: 2500, // 2秒動畫
-          essential: true
-        });
-      }
 
       if (onSelect) {
         onSelect({
@@ -96,16 +133,6 @@ export default function MapView({ onSelect, resetToHome }) {
       const provider = 'Pandora';
       
       console.log('Pandora station clicked:', stationName, 'Instrument:', instrument); // Debug 用
-      
-      // 平滑飛行到監測站位置
-      if (mapRef.current) {
-        mapRef.current.flyTo({
-          center: [lng, lat],
-          zoom: 12,
-          duration: 2000, // 2秒動畫
-          essential: true
-        });
-      }
       
       if (onSelect) {
         onSelect({ 
@@ -252,21 +279,51 @@ export default function MapView({ onSelect, resetToHome }) {
 
       {/* 點擊標記 */}
       {clickMarker && (
-        <Source
-          id="click-marker"
-          type="geojson"
-          data={{
-            type: "FeatureCollection",
-            features: [{
-              type: "Feature",
-              geometry: {
-                type: "Point",
-                coordinates: [clickMarker.lng, clickMarker.lat]
-              },
-              properties: {}
-            }]
-          }}
-        >
+        <>
+          {/* 30公里半徑圓圈 */}
+          <Source
+            id="radius-circle"
+            type="geojson"
+            data={{
+              type: "FeatureCollection",
+              features: [createCircle([clickMarker.lng, clickMarker.lat], 30)]
+            }}
+          >
+            <Layer
+              id="radius-circle-fill"
+              type="fill"
+              paint={{
+                "fill-color": "#3B82F6",
+                "fill-opacity": 0.1
+              }}
+            />
+            <Layer
+              id="radius-circle-stroke"
+              type="line"
+              paint={{
+                "line-color": "#3B82F6",
+                "line-width": 2,
+                "line-opacity": 0.5
+              }}
+            />
+          </Source>
+
+          {/* 點擊標記點 */}
+          <Source
+            id="click-marker"
+            type="geojson"
+            data={{
+              type: "FeatureCollection",
+              features: [{
+                type: "Feature",
+                geometry: {
+                  type: "Point",
+                  coordinates: [clickMarker.lng, clickMarker.lat]
+                },
+                properties: {}
+              }]
+            }}
+          >
           {/* 標記圓圈 */}
           <Layer
             id="click-marker-circle"
@@ -276,9 +333,9 @@ export default function MapView({ onSelect, resetToHome }) {
                 "interpolate",
                 ["linear"],
                 ["zoom"],
-                3, 8,
-                8, 12,
-                15, 20
+                3, 5,
+                8, 8,
+                15, 14
               ],
               "circle-color": "#EF4444",
               "circle-stroke-color": "#FFFFFF",
@@ -295,15 +352,16 @@ export default function MapView({ onSelect, resetToHome }) {
                 "interpolate",
                 ["linear"],
                 ["zoom"],
-                3, 2,
-                8, 3,
-                15, 5
+                3, 1.5,
+                8, 2,
+                15, 3.5
               ],
               "circle-color": "#FFFFFF",
               "circle-opacity": 1
             }}
           />
-        </Source>
+          </Source>
+        </>
       )}
     </Map>
   );
