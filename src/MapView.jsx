@@ -7,8 +7,10 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // exclude: Alaska, Hawaii, Puerto Rico
 
 export default function MapView({ onSelect }) {
-  // 管理標記狀態
+  // 管理標記狀態和地圖引用
   const [clickMarker, setClickMarker] = React.useState(null);
+  const mapRef = React.useRef(null);
+
   const handleMapClick = (event) => {
     const { lng, lat } = event.lngLat;
 
@@ -41,6 +43,16 @@ export default function MapView({ onSelect }) {
       console.log('Station clicked:', stationName, 'Sensors:', sensors); // Debug 用
       console.log('Sensors type in MapView:', typeof sensors, 'Is array:', Array.isArray(sensors)); // Debug
 
+      // 平滑飛行到監測站位置
+      if (mapRef.current) {
+        mapRef.current.flyTo({
+          center: [lng, lat],
+          zoom: 12,
+          duration: 2000, // 2秒動畫
+          essential: true
+        });
+      }
+
       if (onSelect) {
         onSelect({
           lng,
@@ -66,6 +78,16 @@ export default function MapView({ onSelect }) {
       const provider = 'Pandora';
       
       console.log('Pandora station clicked:', stationName, 'Instrument:', instrument); // Debug 用
+      
+      // 平滑飛行到監測站位置
+      if (mapRef.current) {
+        mapRef.current.flyTo({
+          center: [lng, lat],
+          zoom: 12,
+          duration: 2000, // 2秒動畫
+          essential: true
+        });
+      }
       
       if (onSelect) {
         onSelect({ 
@@ -98,6 +120,7 @@ export default function MapView({ onSelect }) {
 
   return (
     <Map
+      ref={mapRef}
       initialViewState={{ longitude: -95.7, latitude: 37.1, zoom: 3.6 }}
       style={{ width: "100vw", height: "100vh" }}
       mapStyle="https://tiles.openfreemap.org/styles/liberty"
