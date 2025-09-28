@@ -49,7 +49,7 @@ export default function App() {
           whiteSpace: 'nowrap'
         }}
       >
-        AirCast | 68332@Taichung NASA Hackathon 2025 | 
+        AirCast | 68332@Taichung NASA Hackathon 2025
       </div>
 
       {/* Legend */}
