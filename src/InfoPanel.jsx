@@ -166,7 +166,7 @@ export default function InfoPanel({ open, data, onClose }) {
         }}
       >
         <Typography variant="h6" component="h2" fontWeight="bold">
-          United States Air Quality
+          AirCast
         </Typography>
       </Box>
 
