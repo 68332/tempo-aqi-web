@@ -19,7 +19,7 @@ export default function MapView({ onSelect }) {
       layers: ['us-fill', 'openaq-us-stations-points', 'pandora-us-stations-points'] // 只查詢這兩個圖層, 
     });
 
-    // 優先檢查是否點擊到監測站
+    // 優先檢查是否點擊到 openaq 監測站
     const stationFeature = features.find(f => f.layer.id === 'openaq-us-stations-points');
     if (stationFeature) {
       const { lng, lat } = event.lngLat;
@@ -50,7 +50,32 @@ export default function MapView({ onSelect }) {
           provider,
           timezone,
           sensors, // 傳遞 sensors 資料
-          isStation: true
+          isStation: true,
+          type: 'openaq'
+        });
+      }
+      return;
+    }
+
+    // 檢查是否點擊到 Pandora 監測站
+    const pandoraFeature = features.find(f => f.layer.id === 'pandora-us-stations-points');
+    if (pandoraFeature) {
+      console.log(pandoraFeature);
+      const { lng, lat } = event.lngLat;
+      const stationName = pandoraFeature.properties.station || 'Unknown Station';
+      const instrument = pandoraFeature.properties.instrument || 'Unknown Instrument';
+
+      console.log('lng, lat:', lng, lat);
+      console.log('Pandora Station clicked:', stationName, 'Instrument:', instrument);
+
+      if (onSelect) {
+        onSelect({
+          lng,
+          lat,
+          stationName,
+          instrument,
+          isStation: true,
+          type: 'pandora'
         });
       }
       return;

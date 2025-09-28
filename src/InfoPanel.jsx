@@ -22,11 +22,19 @@ export default function InfoPanel({ open, data, onClose }) {
 
   // 當 data 改變且有 sensors 時，獲取 sensor 資料
   React.useEffect(() => {
-    if (data && data.sensors && data.sensors.length > 0) {
-      console.log('Fetching data for sensors:', data.sensors); // Debug
-      fetchSensorData(data.sensors);
-    } else {
-      setSensorData([]);
+    if (data) {
+      // if data is from openaq
+      if (data.type === 'openaq') {
+        if (data && data.sensors && data.sensors.length > 0) {
+          console.log('Fetching data for sensors:', data.sensors); // Debug
+          fetchSensorData(data.sensors);
+        } else {
+          setSensorData([]);
+        }
+        // if data is from pandora
+      } else if (data.type === 'pandora') {
+        fetchPandoraData(data);
+      }
     }
   }, [data]);
 
@@ -120,6 +128,67 @@ export default function InfoPanel({ open, data, onClose }) {
       setLoading(false);
     }
   };
+
+  // Fetch Pandora data
+  const fetchPandoraData = async (data) => {
+    setLoading(true);
+    try {
+      // use proxy to avoid CORS issue
+      const response = await fetch(`/api/pandora/${data.stationName}/${data.instrument}/L2/${data.instrument}_${data.stationName}_L2_rnvh3p1-8.txt`);
+      if (response.ok) {
+        const text = await response.text();
+        const lines = text.trim().split('\n');
+        const tail = lines.slice(-5);
+
+        let lastDataLine = null;
+        for (let i = tail.length - 1; i >= 0; i--) {
+          const line = tail[i].trim();
+          if (/^\d{8}T\d{6}/.test(line)) { // 符合時間戳格式 20250920T233650
+            lastDataLine = line;
+            break;
+          }
+        }
+
+        if (lastDataLine) {
+          const cols = lastDataLine.split(/\s+/);
+          const timestamp = cols[0];
+          const value = cols[56];
+          const isoTimestamp = `${timestamp.slice(0, 4)}-${timestamp.slice(4, 6)}-${timestamp.slice(6, 8)}T${timestamp.slice(9, 11)}:${timestamp.slice(11, 13)}:${timestamp.slice(13, 15)}Z`;
+
+          setSensorData([{
+            sensor: {
+              parameter_display_name: 'NO₂',
+              parameter_name: 'no2',
+              parameter_units: 'mol/m3' // 若知道正確單位請替換
+            },
+            data: {
+              latest: {
+                value: value != null ? Number(value) : null,
+                datetime: { local: isoTimestamp }
+              },
+              summary: null,
+            },
+            error: null
+          }]);
+        } else {
+          setSensorData([]);
+          setLoading(false);
+        }
+        return
+      } else {
+        setSensorData([]);
+        setLoading(false);
+        return
+      }
+    } catch (error) {
+      console.error('Error fetching sensor data:', error);
+      setSensorData([]);
+      setLoading(false);
+      return
+    } finally {
+      setLoading(false);
+    }
+  }
 
   // Debug: 監聽 sensorData 變化
   React.useEffect(() => {
