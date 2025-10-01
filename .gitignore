@@ -32,3 +32,26 @@ __pycache__/
 *.pyd
 .Python
 *.egg-info/
+
+# Large data files and directories
+*.nc
+*.tif
+*.tiff
+*.hdf
+*.h5
+*.hdf5
+*.zip
+
+# Environment files
+*.env
+.env.local
+
+# TEMPO data directories
+/tempo
+public/tempo/
+public/data/
+
+# Tiles and processed data
+tiles/
+geotiff/
+no2/
