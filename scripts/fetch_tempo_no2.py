@@ -10,6 +10,9 @@ from rasterio.crs import CRS
 import numpy as np
 import subprocess
 
+# 允許透過環境變數覆寫 NetCDF 引擎，預設沿用 h5netcdf 以支援 NetCDF4 群組
+NETCDF_ENGINE = os.environ.get("TEMPO_NETCDF_ENGINE", "h5netcdf")
+
 # 載入 .env 檔案的簡單實作
 def load_env_file():
     """簡單的 .env 檔案載入器"""
@@ -38,7 +41,7 @@ load_env_file()
 
 CMR_URL = "https://cmr.earthdata.nasa.gov/search/granules.json"
 PARAMS = {
-    "echo_collection_id": "C3685896708-LARC_CLOUD",  # TEMPO NO2 Gridded 新集合
+    "echo_collection_id": "C3685668637-LARC_CLOUD",  # TEMPO NO2 Gridded 新集合
     "sort_key": "-start_date",
     "page_size": 1,  # 只要最新一筆
 }
@@ -106,54 +109,62 @@ def convert_nc_to_geotiff(nc_file_path, output_dir="../public/tempo/geotiff"):
     output_path.mkdir(parents=True, exist_ok=True)
     
     try:
-        # 使用 xarray 讀取 NetCDF 檔案
-        ds = xr.open_dataset(nc_file_path)
-        print(f"NetCDF 變數: {list(ds.variables.keys())}")
-        
-        # 找到 NO2 相關的主要變數
-        # TEMPO NO2 檔案通常包含 'nitrogen_dioxide_tropospheric_vertical_column'
-        no2_var_names = [
-            'nitrogen_dioxide_tropospheric_vertical_column',
-            'NO2_tropospheric_vertical_column', 
-            'NO2_column',
-            'NO2'
-        ]
-        
-        no2_var = None
-        for var_name in no2_var_names:
-            if var_name in ds.variables:
-                no2_var = var_name
-                break
-        
-        if no2_var is None:
-            print(f"找不到 NO2 變數，可用變數: {list(ds.variables.keys())}")
-            # 如果找不到，使用第一個看起來像數據的變數
-            data_vars = [var for var in ds.variables if len(ds[var].dims) >= 2]
-            if data_vars:
-                no2_var = data_vars[0]
-                print(f"使用變數: {no2_var}")
+        # 先從根層取得座標資訊
+        with xr.open_dataset(nc_file_path, engine=NETCDF_ENGINE) as root_ds:
+            print(f"根層變數: {list(root_ds.variables.keys())}")
+
+            if 'latitude' in root_ds and 'longitude' in root_ds:
+                lat_name, lon_name = 'latitude', 'longitude'
+            elif 'lat' in root_ds and 'lon' in root_ds:
+                lat_name, lon_name = 'lat', 'lon'
             else:
-                raise ValueError("找不到合適的數據變數")
-        
-        print(f"使用 NO2 變數: {no2_var}")
-        
-        # 獲取數據
-        data = ds[no2_var]
+                print(f"可用座標: {list(root_ds.variables.keys())}")
+                raise ValueError("找不到緯度和經度座標")
+
+            lats = root_ds[lat_name].values
+            lons = root_ds[lon_name].values
+
+        # 依序嘗試候選的 NO2 變數 (group, variable)
+        candidate_vars = [
+            ('product', 'vertical_column_troposphere'),
+            ('support_data', 'vertical_column_total'),
+            (None, 'vertical_column_troposphere'),
+            (None, 'vertical_column_total'),
+            ('product', 'vertical_column_troposphere_uncertainty'),
+            ('support_data', 'fitted_slant_column'),
+        ]
+
+        data = None
+        for group_name, var_name in candidate_vars:
+            try:
+                if group_name is None:
+                    group_ds = xr.open_dataset(
+                        nc_file_path,
+                        engine=NETCDF_ENGINE,
+                    )
+                else:
+                    group_ds = xr.open_dataset(
+                        nc_file_path,
+                        group=group_name,
+                        engine=NETCDF_ENGINE,
+                    )
+            except OSError:
+                continue
+
+            if var_name in group_ds.data_vars:
+                data = group_ds[var_name].load()
+                print(f"使用 NO2 變數: {var_name} (group='{group_name}')")
+                group_ds.close()
+                break
+
+            group_ds.close()
+
+        if data is None:
+            raise ValueError("找不到可用的 NO2 變數，請檢查 NetCDF 檔案內容")
+
         print(f"數據形狀: {data.shape}")
         print(f"數據維度: {data.dims}")
-        
-        # 獲取座標資訊
-        # TEMPO 通常使用 latitude 和 longitude
-        if 'latitude' in ds.coords and 'longitude' in ds.coords:
-            lats = ds['latitude'].values
-            lons = ds['longitude'].values
-        elif 'lat' in ds.coords and 'lon' in ds.coords:
-            lats = ds['lat'].values
-            lons = ds['lon'].values
-        else:
-            print(f"可用座標: {list(ds.coords.keys())}")
-            raise ValueError("找不到緯度和經度座標")
-        
+
         # 如果數據有時間維度，取第一個時間點
         if 'time' in data.dims:
             data = data.isel(time=0)
@@ -238,10 +249,10 @@ def convert_nc_to_geotiff(nc_file_path, output_dir="../public/tempo/geotiff"):
             # 添加描述
             dst.update_tags(
                 DESCRIPTION=f'TEMPO NO2 data from {nc_filename}',
-                VARIABLE_NAME=no2_var
+                VARIABLE_NAME=candidate_vars
             )
         
-        ds.close()
+        dst.close()
         
         print(f"✓ GeoTIFF 轉換完成: {geotiff_path}")
         return str(geotiff_path)
