@@ -7,7 +7,13 @@ export default function App() {
   const [selection, setSelection] = React.useState(null);
   const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 900);
   const [resetToHome, setResetToHome] = React.useState(false);
+  
+  // 圖層顯示控制狀態
   const [showTempoLayer, setShowTempoLayer] = React.useState(true); // 控制 TEMPO NO2 圖層顯示
+  const [showOpenAQLayer, setShowOpenAQLayer] = React.useState(true); // 控制 OpenAQ 監測站顯示
+  const [showPandoraLayer, setShowPandoraLayer] = React.useState(true); // 控制 Pandora 監測站顯示
+  const [showTOLNetLayer, setShowTOLNetLayer] = React.useState(true); // 控制 TOLNet 監測站顯示
+  
   // selection: { lng, lat, stateName } | null
 
   React.useEffect(() => {
@@ -34,6 +40,9 @@ export default function App() {
         onSelect={setSelection} 
         resetToHome={resetToHome} 
         showTempoLayer={showTempoLayer}
+        showOpenAQLayer={showOpenAQLayer}
+        showPandoraLayer={showPandoraLayer}
+        showTOLNetLayer={showTOLNetLayer}
       />
 
       {/* 右側資訊面板（浮在地圖上） */}
@@ -43,6 +52,12 @@ export default function App() {
         onClose={handleResetToHome}
         showTempoLayer={showTempoLayer}
         onToggleTempoLayer={setShowTempoLayer}
+        showOpenAQLayer={showOpenAQLayer}
+        onToggleOpenAQLayer={setShowOpenAQLayer}
+        showPandoraLayer={showPandoraLayer}
+        onTogglePandoraLayer={setShowPandoraLayer}
+        showTOLNetLayer={showTOLNetLayer}
+        onToggleTOLNetLayer={setShowTOLNetLayer}
       />
 
       {/* Footer */}

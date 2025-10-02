@@ -14,7 +14,19 @@ import {
   FormControlLabel
 } from '@mui/material';
 
-export default function InfoPanel({ open, data, onClose, showTempoLayer, onToggleTempoLayer }) {
+export default function InfoPanel({ 
+  open, 
+  data, 
+  onClose, 
+  showTempoLayer, 
+  onToggleTempoLayer, 
+  showOpenAQLayer, 
+  onToggleOpenAQLayer, 
+  showPandoraLayer, 
+  onTogglePandoraLayer, 
+  showTOLNetLayer, 
+  onToggleTOLNetLayer 
+}) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -29,6 +41,68 @@ export default function InfoPanel({ open, data, onClose, showTempoLayer, onToggl
   React.useEffect(() => {
     setTitleKey(prev => prev + 1);
   }, [!!data]);
+
+  // 將 TEMPO NO2 柱濃度轉換為地表濃度 (ppb)
+  const convertTEMPOColumnToPPB = (columnDensity) => {
+    // columnDensity: molecules/cm²
+    // 返回: ppb (parts per billion by volume)
+    
+    if (!columnDensity || columnDensity <= 0) return null;
+    
+    // 轉換常數和假設
+    const AVOGADRO = 6.022e23; // molecules/mol
+    const MOLAR_VOLUME_STP = 22.4; // L/mol at STP
+    const PRESSURE_SURFACE = 1013.25; // hPa (標準大氣壓)
+    const TEMPERATURE_SURFACE = 288.15; // K (15°C)
+    
+    // 假設對流層混合層高度 (典型值 1-2 km)
+    const MIXING_HEIGHT = 1.5e5; // cm (1.5 km = 150,000 cm)
+    
+    // 形狀因子：考慮 NO2 在對流層中的垂直分布
+    // 大部分 NO2 集中在邊界層，使用經驗值 0.6-0.8
+    const SHAPE_FACTOR = 0.7;
+    
+    try {
+      // 步驟 1: 假設柱濃度主要來自混合層
+      const volumeDensity = (columnDensity * SHAPE_FACTOR) / MIXING_HEIGHT; // molecules/cm³
+      
+      // 步驟 2: 轉換為分子濃度 (mol/cm³)
+      const molarConcentration = volumeDensity / AVOGADRO; // mol/cm³
+      
+      // 步驟 3: 轉換為體積混合比 (ppb)
+      // 使用理想氣體定律: PV = nRT
+      // 空氣密度在標準條件下約為 2.46e19 molecules/cm³
+      const airDensity = (PRESSURE_SURFACE * 100) / (1.38e-16 * TEMPERATURE_SURFACE); // molecules/cm³
+      const ppb = (volumeDensity / airDensity) * 1e9; // ppb
+      
+      // 信心度評估
+      let confidence = 0.7; // 基礎信心度
+      let uncertainty = null;
+      
+      if (ppb <= 0) {
+        confidence = 0.1;
+        uncertainty = "Negative values indicate data quality issues";
+      } else if (ppb > 200) {
+        confidence = 0.4;
+        uncertainty = "Very high values may indicate pollution events or data errors";
+      } else if (ppb > 100) {
+        confidence = 0.6;
+        uncertainty = "High values should be validated with ground measurements";
+      }
+
+      return {
+        ppb: ppb,
+        columnDensity: columnDensity,
+        mixingHeight: MIXING_HEIGHT / 1e5, // km
+        shapeFactor: SHAPE_FACTOR,
+        confidence: confidence,
+        uncertainty: uncertainty
+      };
+    } catch (error) {
+      console.error('TEMPO conversion error:', error);
+      return null;
+    }
+  };
 
   // AQI 計算函數
   const calculateAQI = (pollutants) => {
@@ -90,22 +164,31 @@ export default function InfoPanel({ open, data, onClose, showTempoLayer, onToggl
 
     const calculateSingleAQI = (concentration, pollutant) => {
       const breakpoints = aqiBreakpoints[pollutant];
-      if (!breakpoints || concentration === null || concentration === undefined) return null;
+      console.log(`Calculating AQI for ${pollutant}, concentration: ${concentration}, breakpoints:`, breakpoints);
+      
+      if (!breakpoints || concentration === null || concentration === undefined) {
+        console.log(`No breakpoints or invalid concentration for ${pollutant}`);
+        return null;
+      }
 
       for (const bp of breakpoints) {
         if (concentration >= bp.lo && concentration <= bp.hi) {
           const aqi = Math.round(
             ((bp.aqiHi - bp.aqiLo) / (bp.hi - bp.lo)) * (concentration - bp.lo) + bp.aqiLo
           );
+          console.log(`AQI calculated for ${pollutant}: ${aqi}`);
           return aqi;
         }
       }
+      console.log(`No matching breakpoint found for ${pollutant} with concentration ${concentration}`);
       return null;
     };
 
     let maxAqi = 0;
     let dominantPollutant = '';
     const individualAqis = {};
+
+    console.log('Pollutants data for AQI calculation:', pollutants);
 
     Object.entries(pollutants).forEach(([pollutant, data]) => {
       if (data.max !== null && data.max !== undefined) {
@@ -120,6 +203,7 @@ export default function InfoPanel({ open, data, onClose, showTempoLayer, onToggl
       }
     });
 
+    console.log('Final AQI calculation result:', { maxAqi, dominantPollutant, individualAqis });
     return maxAqi > 0 ? { aqi: maxAqi, dominantPollutant, individualAqis } : null;
   };
 
@@ -145,11 +229,70 @@ export default function InfoPanel({ open, data, onClose, showTempoLayer, onToggl
     }
   }, [data]);
 
-  // 計算 AQI 當有附近監測站數據或 sensor 數據時
+  // 將不同單位的 NO2 轉換為 ppb (AQI 計算標準單位)
+  const convertNO2ToPPB = (value, unit) => {
+    if (!value || !unit) return value;
+    
+    const unitLower = unit.toLowerCase();
+    
+    // 如果已經是 ppb，直接返回
+    if (unitLower.includes('ppb')) {
+      return value;
+    }
+    
+    // 如果是 μg/m³，轉換為 ppb
+    // NO2 分子量 = 46.0055 g/mol
+    // 在標準條件下 (20°C, 1 atm): 1 ppb = 1.88 μg/m³
+    if (unitLower.includes('μg/m³') || unitLower.includes('ug/m3')) {
+      return value / 1.88; // μg/m³ to ppb
+    }
+    
+    // 如果是 ppm，轉換為 ppb
+    if (unitLower.includes('ppm')) {
+      return value * 1000; // ppm to ppb
+    }
+    
+    // 預設假設是 ppb
+    return value;
+  };
+
+  // 計算 AQI 當有附近監測站數據、sensor 數據或 TEMPO 數據時
   React.useEffect(() => {
+    console.log('AQI calculation useEffect triggered:', {
+      hasNearbyData: !!data?.nearbyStationsData?.pollutantData,
+      sensorDataLength: sensorData.length,
+      hasTempoData: !!data?.tempoData,
+      tempoValue: data?.tempoData?.value
+    });
+
     if (data?.nearbyStationsData?.pollutantData) {
-      const aqiResult = calculateAQI(data.nearbyStationsData.pollutantData);
-      console.log('Calculated AQI:', aqiResult);
+      // 複製附近站點的污染物數據
+      const pollutantData = { ...data.nearbyStationsData.pollutantData };
+      console.log('Original nearby stations pollutant data:', pollutantData);
+      
+      // 如果有 TEMPO 數據，加入或更新 NO2
+      if (data?.tempoData) {
+        const tempoConversion = convertTEMPOColumnToPPB(data.tempoData.value);
+        console.log('TEMPO conversion for nearby stations case:', tempoConversion);
+        
+        if (tempoConversion && tempoConversion.ppb > 0) {
+          if (!pollutantData.no2) {
+            pollutantData.no2 = { max: 0, values: [], unit: 'ppb', source: 'ground' };
+          }
+          
+          // 如果衛星數據更高，或者沒有地面 NO2 數據，使用衛星數據
+          if (pollutantData.no2.values.length === 0 || tempoConversion.ppb > pollutantData.no2.max) {
+            pollutantData.no2.max = tempoConversion.ppb;
+            pollutantData.no2.values = [tempoConversion.ppb];
+            pollutantData.no2.source = 'satellite';
+            pollutantData.no2.unit = 'ppb';
+          }
+          console.log('Updated pollutant data with TEMPO NO2:', pollutantData);
+        }
+      }
+      
+      const aqiResult = calculateAQI(pollutantData);
+      console.log('Calculated AQI from nearby stations (with TEMPO):', aqiResult);
       setAqiData(aqiResult);
     } else if (sensorData.length > 0) {
       // 對於單一監測站，從 sensor 數據計算 AQI
@@ -158,20 +301,66 @@ export default function InfoPanel({ open, data, onClose, showTempoLayer, onToggl
         if (item.data?.latest?.value !== null && item.data?.latest?.value !== undefined) {
           const paramName = item.sensor.parameter_name?.toLowerCase();
           if (['pm25', 'pm10', 'o3', 'co', 'so2', 'no2'].includes(paramName)) {
+            let value = item.data.latest.value;
+            
+            // 對於 NO2，確保轉換為 ppb 用於 AQI 計算
+            if (paramName === 'no2') {
+              value = convertNO2ToPPB(value, item.sensor.parameter_units);
+            }
+            
             pollutantData[paramName] = {
-              max: item.data.latest.value,
-              values: [item.data.latest.value]
+              max: value,
+              values: [value],
+              unit: paramName === 'no2' ? 'ppb' : item.sensor.parameter_units,
+              source: 'ground'
             };
           }
         }
       });
+      
+      // 如果有 TEMPO 數據，加入 NO2
+      if (data?.tempoData) {
+        const tempoConversion = convertTEMPOColumnToPPB(data.tempoData.value);
+        if (tempoConversion && tempoConversion.ppb > 0) {
+          pollutantData.no2 = pollutantData.no2 || { max: 0, values: [] };
+          // 如果沒有地面 NO2 數據，或者衛星數據更高，使用衛星數據
+          if (!pollutantData.no2.values.length || tempoConversion.ppb > pollutantData.no2.max) {
+            pollutantData.no2.max = tempoConversion.ppb;
+            pollutantData.no2.values = [tempoConversion.ppb];
+            pollutantData.no2.source = 'satellite';
+          }
+        }
+      }
+      
       const aqiResult = calculateAQI(pollutantData);
       console.log('Calculated AQI from sensors:', aqiResult);
       setAqiData(aqiResult);
+    } else if (data?.tempoData) {
+      // 只有 TEMPO 數據時，嘗試計算基於衛星 NO2 的 AQI
+      console.log('Processing TEMPO-only data:', data.tempoData);
+      const tempoConversion = convertTEMPOColumnToPPB(data.tempoData.value);
+      console.log('TEMPO conversion result:', tempoConversion);
+      
+      if (tempoConversion && tempoConversion.ppb > 0) {
+        const pollutantData = {
+          no2: {
+            max: tempoConversion.ppb,
+            values: [tempoConversion.ppb],
+            source: 'satellite'
+          }
+        };
+        const aqiResult = calculateAQI(pollutantData);
+        console.log('Calculated AQI from TEMPO only:', aqiResult);
+        setAqiData(aqiResult);
+      } else {
+        console.log('TEMPO conversion failed or invalid ppb value');
+        setAqiData(null);
+      }
     } else {
+      console.log('No data available for AQI calculation');
       setAqiData(null);
     }
-  }, [data?.nearbyStationsData, sensorData]);
+  }, [data?.nearbyStationsData, sensorData, data?.tempoData]);
 
   // 獲取 sensor 資料的函數
   const fetchSensorData = async (sensors) => {
@@ -410,6 +599,8 @@ export default function InfoPanel({ open, data, onClose, showTempoLayer, onToggl
               <Typography variant="subtitle2" fontWeight="600" sx={{ mb: 1 }}>
                 Map Layers
               </Typography>
+              
+              {/* TEMPO NO₂ 衛星數據 */}
               <FormControlLabel
                 control={
                   <Switch
@@ -426,6 +617,93 @@ export default function InfoPanel({ open, data, onClose, showTempoLayer, onToggl
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       Real-time nitrogen dioxide measurements from space
+                    </Typography>
+                  </Box>
+                }
+                sx={{ 
+                  alignItems: 'flex-start',
+                  mb: 1,
+                  '& .MuiFormControlLabel-label': {
+                    ml: 1
+                  }
+                }}
+              />
+
+              {/* OpenAQ 監測站 */}
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showOpenAQLayer}
+                    onChange={(event) => onToggleOpenAQLayer(event.target.checked)}
+                    size="small"
+                    color="primary"
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      OpenAQ Ground Stations
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Ground-based air quality monitoring network
+                    </Typography>
+                  </Box>
+                }
+                sx={{ 
+                  alignItems: 'flex-start',
+                  mb: 1,
+                  '& .MuiFormControlLabel-label': {
+                    ml: 1
+                  }
+                }}
+              />
+
+              {/* Pandora 監測站 */}
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showPandoraLayer}
+                    onChange={(event) => onTogglePandoraLayer(event.target.checked)}
+                    size="small"
+                    color="primary"
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      Pandora Stations
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Atmospheric composition measurement stations
+                    </Typography>
+                  </Box>
+                }
+                sx={{ 
+                  alignItems: 'flex-start',
+                  mb: 1,
+                  '& .MuiFormControlLabel-label': {
+                    ml: 1
+                  }
+                }}
+              />
+
+              {/* TOLNet 監測站 */}
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showTOLNetLayer}
+                    onChange={(event) => onToggleTOLNetLayer(event.target.checked)}
+                    size="small"
+                    color="primary"
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      TOLNet Stations
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Tropospheric Ozone Lidar Network
                     </Typography>
                   </Box>
                 }
@@ -492,31 +770,104 @@ export default function InfoPanel({ open, data, onClose, showTempoLayer, onToggl
 
             {/* 圖層控制 - 在選中數據時也顯示 */}
             <Box sx={{ mb: 2 }}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showTempoLayer}
-                    onChange={(event) => onToggleTempoLayer(event.target.checked)}
-                    size="small"
-                    color="primary"
-                  />
-                }
-                label={
-                  <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                    TEMPO NO₂ Layer
-                  </Typography>
-                }
-                sx={{ 
-                  '& .MuiFormControlLabel-label': {
-                    ml: 1
+              <Typography variant="subtitle2" fontWeight="600" sx={{ mb: 1, fontSize: '0.8rem' }}>
+                Map Layers
+              </Typography>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={showTempoLayer}
+                      onChange={(event) => onToggleTempoLayer(event.target.checked)}
+                      size="small"
+                      color="primary"
+                    />
                   }
-                }}
-              />
+                  label={
+                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                      TEMPO NO₂
+                    </Typography>
+                  }
+                  sx={{ 
+                    margin: 0,
+                    '& .MuiFormControlLabel-label': {
+                      ml: 0.5
+                    }
+                  }}
+                />
+                
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={showOpenAQLayer}
+                      onChange={(event) => onToggleOpenAQLayer(event.target.checked)}
+                      size="small"
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                      OpenAQ
+                    </Typography>
+                  }
+                  sx={{ 
+                    margin: 0,
+                    '& .MuiFormControlLabel-label': {
+                      ml: 0.5
+                    }
+                  }}
+                />
+                
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={showPandoraLayer}
+                      onChange={(event) => onTogglePandoraLayer(event.target.checked)}
+                      size="small"
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                      Pandora
+                    </Typography>
+                  }
+                  sx={{ 
+                    margin: 0,
+                    '& .MuiFormControlLabel-label': {
+                      ml: 0.5
+                    }
+                  }}
+                />
+                
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={showTOLNetLayer}
+                      onChange={(event) => onToggleTOLNetLayer(event.target.checked)}
+                      size="small"
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                      TOLNet
+                    </Typography>
+                  }
+                  sx={{ 
+                    margin: 0,
+                    '& .MuiFormControlLabel-label': {
+                      ml: 0.5
+                    }
+                  }}
+                />
+              </Box>
             </Box>
 
             {/* AQI 顯示 */}
             {aqiData && (
-              <Box sx={{ mb: 2 }}>
+              <Box sx={{ mb: 3 }}>
                 <Typography variant="caption" color="text.secondary">
                   Air Quality Index
                 </Typography>
@@ -544,170 +895,272 @@ export default function InfoPanel({ open, data, onClose, showTempoLayer, onToggl
 
             <Divider sx={{ my: 2 }} />
 
-            {/* Sensor 資料顯示 */}
-            {data.isStation && (
+            {/* 衛星數據區域 */}
+            <Box sx={{ 
+              mb: 3, 
+              p: 2, 
+              bgcolor: 'rgba(33, 150, 243, 0.05)', 
+              borderRadius: 2,
+              border: '1px solid rgba(33, 150, 243, 0.2)'
+            }}>
+              <Typography variant="subtitle2" fontWeight="600" sx={{ mb: 2, color: 'primary.main' }}>
+                🛰️ Satellite Data
+              </Typography>
+              
+              {/* TEMPO NO2 衛星數據顯示 */}
               <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
-                  Sensor Data
-                </Typography>
-
-                {loading ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
-                    <CircularProgress size={24} />
-                    <Typography variant="body2" sx={{ ml: 1 }}>
-                      Loading sensor data...
-                    </Typography>
-                  </Box>
-                ) : sensorData.length > 0 ? (
-                  <Box>
-                    <Typography variant="caption" color="success.main" sx={{ mb: 1 }}>
-                      Successfully loaded {sensorData.length} sensors
-                    </Typography>
-                    {sensorData.map((item, index) => (
-                      <Paper key={index} variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <Chip
-                            label={item.sensor.parameter_display_name || item.sensor.parameter_name}
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                          />
-                        </Box>
-
-                        {item.data ? (
-                          <Box>
-                            <Typography variant="h6" fontWeight="600">
-                              {typeof item.data.latest?.value === 'number' ? 
-                                item.data.latest.value.toFixed(3) : 
-                                item.data.latest?.value} {item.sensor.parameter_units}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {item.data.latest?.datetime?.local ?
-                                new Date(item.data.latest.datetime.local).toLocaleString() :
-                                'No timestamp'
-                              }
-                            </Typography>
-                            {item.data.summary && (
-                              <Typography variant="caption" display="block" color="text.secondary">
-                                Avg: {typeof item.data.summary.avg === 'number' ? item.data.summary.avg.toFixed(3) : item.data.summary.avg} |
-                                Min: {typeof item.data.summary.min === 'number' ? item.data.summary.min.toFixed(3) : item.data.summary.min} |
-                                Max: {typeof item.data.summary.max === 'number' ? item.data.summary.max.toFixed(3) : item.data.summary.max}
-                              </Typography>
-                            )}
-                          </Box>
-                        ) : (
-                          <Typography variant="body2" color="error">
-                            {item.error || 'No data available'}
-                          </Typography>
-                        )}
-                      </Paper>
-                    ))}
-                  </Box>
-                ) : data.sensors && data.sensors.length > 0 ? (
-                  <Paper variant="outlined" sx={{ p: 1.5, mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Station has {data.sensors.length} sensors. Showing data for PM2.5, PM10, O3, CO, SO2, and NO2 only.
-                      No target pollutant sensors found at this station.
-                    </Typography>
-                  </Paper>
-                ) : data.stationType === 'Pandora' ? (
-                  <Paper variant="outlined" sx={{ p: 1.5, mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Pandora stations provide atmospheric composition data. 
-                      Real-time sensor data integration coming soon.
-                    </Typography>
-                  </Paper>
-                ) : (
-                  <Paper variant="outlined" sx={{ p: 1.5, mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      No sensors available for this station.
-                    </Typography>
-                  </Paper>
-                )}
-              </Box>
-            )}
-
-            {/* 附近監測站空氣品質數據 */}
-            {!data.isStation && (data.nearbyStationsData || data.loadingNearbyData) && (
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
-                  Air Quality in 10km Radius
+                <Typography variant="caption" color="text.secondary">
+                  TEMPO NO₂
                 </Typography>
                 
-                {data.loadingNearbyData ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
-                    <CircularProgress size={24} />
-                    <Typography variant="body2" sx={{ ml: 1 }}>
-                      Loading nearby station data...
+                {data.loadingTempoData ? (
+                  <Paper variant="outlined" sx={{ p: 1.5, mt: 0.5, textAlign: 'center' }}>
+                    <CircularProgress size={20} sx={{ mr: 1 }} />
+                    <Typography variant="body2" color="text.secondary" display="inline">
+                      Loading satellite data...
                     </Typography>
-                  </Box>
-                ) : data.nearbyStationsData && data.nearbyStationsData.nearbyStationsCount > 0 ? (
-                  <Box>
-                    <Typography variant="body2" color="success.main" sx={{ mb: 2 }}>
-                      Found {data.nearbyStationsData.nearbyStationsCount} monitoring stations within 10km
-                    </Typography>
-
-                    {/* 顯示指定污染物的最大值 */}
-                    {Object.entries(data.nearbyStationsData.pollutantData)
-                      .filter(([pollutant, pollutantInfo]) => pollutantInfo.values.length > 0)
-                      .map(([pollutant, pollutantInfo]) => (
-                        <Paper key={pollutant} variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <Chip
-                              label={pollutant.toUpperCase()}
-                              size="small"
+                  </Paper>
+                ) : data.tempoData ? (
+                  <Paper variant="outlined" sx={{ p: 1.5, mt: 0.5 }}>
+                    {/* 轉換後的地表濃度 - 簡化格式 */}
+                    {(() => {
+                      const conversion = convertTEMPOColumnToPPB(data.tempoData.value);
+                      return conversion ? (
+                        <Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                            <Typography variant="body1" fontWeight="600">
+                              {data.tempoData.value.toExponential(2)} mol/cm² → {conversion.ppb.toFixed(1)} ppb
+                            </Typography>
+                            <Chip 
+                              label="NO₂" 
+                              size="small" 
                               color="primary"
                               variant="outlined"
                             />
-                            <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                              ({pollutantInfo.values.length} sensors)
-                            </Typography>
                           </Box>
-
-                          <Typography variant="h6" fontWeight="600">
-                            {pollutantInfo.max !== null ? pollutantInfo.max.toFixed(1) : '—'} {pollutantInfo.unit || 'μg/m³'}
+                          
+                          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                            Confidence: {(conversion.confidence * 100).toFixed(0)}% | Real-time from TEMPO satellite
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {pollutantInfo.max !== null 
-                              ? `From the maximum of ${pollutantInfo.values.length} active sensor${pollutantInfo.values.length > 1 ? 's' : ''}`
-                              : 'No recent data available'
-                            }
-                          </Typography>
-                        </Paper>
-                      ))}
-
-                    {/* 如果沒有任何污染物數據 */}
-                    {Object.values(data.nearbyStationsData.pollutantData).every(p => p.values.length === 0) && (
-                      <Paper variant="outlined" sx={{ p: 1.5, mb: 2 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          No PM2.5, PM10, O3, CO, SO2, or NO2 data available from nearby stations.
-                        </Typography>
-                      </Paper>
-                    )}
-                  </Box>
+                          
+                          {conversion.uncertainty && (
+                            <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
+                              ⚠️ {conversion.uncertainty}
+                            </Typography>
+                          )}
+                        </Box>
+                      ) : null;
+                    })()}
+                  </Paper>
                 ) : (
-                  <Paper variant="outlined" sx={{ p: 1.5, mb: 2 }}>
+                  <Paper variant="outlined" sx={{ p: 1.5, mt: 0.5 }}>
                     <Typography variant="body2" color="text.secondary">
-                      No monitoring stations found within 10km radius.
+                      No TEMPO satellite data available for this location
                     </Typography>
                   </Paper>
                 )}
               </Box>
-            )}
+            </Box>
 
-            {/* 預留空間給沒有附近監測站數據的情況 */}
-            {!data.isStation && !data.nearbyStationsData && !data.loadingNearbyData && (
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
-                  Air Quality
-                </Typography>
-                <Paper variant="outlined" sx={{ p: 1.5, mb: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Click anywhere on the map to explore local air quality data.
+            {/* 地面站數據區域 */}
+            <Box sx={{ 
+              mb: 3, 
+              p: 2, 
+              bgcolor: 'rgba(76, 175, 80, 0.05)', 
+              borderRadius: 2,
+              border: '1px solid rgba(76, 175, 80, 0.2)'
+            }}>
+              <Typography variant="subtitle2" fontWeight="600" sx={{ mb: 2, color: 'success.main' }}>
+                🏢 Ground Station Data
+              </Typography>
+
+              {/* Sensor 資料顯示 */}
+              {data.isStation && (
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
+                    Real-time Measurements
                   </Typography>
-                </Paper>
-              </Box>
-            )}
+
+                  {loading ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
+                      <CircularProgress size={24} />
+                      <Typography variant="body2" sx={{ ml: 1 }}>
+                        Loading sensor data...
+                      </Typography>
+                    </Box>
+                  ) : sensorData.length > 0 ? (
+                    <Box>
+                      <Typography variant="caption" color="success.main" sx={{ mb: 1 }}>
+                        Successfully loaded {sensorData.length} sensors
+                      </Typography>
+                      {sensorData.map((item, index) => (
+                        <Paper key={index} variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <Chip
+                              label={item.sensor.parameter_display_name || item.sensor.parameter_name}
+                              size="small"
+                              color="success"
+                              variant="outlined"
+                            />
+                          </Box>
+
+                          {item.data ? (
+                            <Box>
+                              {(() => {
+                                const paramName = item.sensor.parameter_name?.toLowerCase();
+                                const isNO2 = paramName === 'no2';
+                                const originalValue = item.data.latest?.value;
+                                const displayValue = isNO2 ? convertNO2ToPPB(originalValue, item.sensor.parameter_units) : originalValue;
+                                const displayUnit = isNO2 ? 'ppb' : item.sensor.parameter_units;
+                                
+                                return (
+                                  <>
+                                    <Typography variant="h6" fontWeight="600">
+                                      {typeof displayValue === 'number' ? 
+                                        displayValue.toFixed(6) : 
+                                        displayValue} {displayUnit}
+                                    </Typography>
+                                    
+                                    {/* 對於 NO2 顯示原始值和轉換說明 */}
+                                    {isNO2 && originalValue !== displayValue && (
+                                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                        Original: {originalValue?.toFixed(6)} {item.sensor.parameter_units} → {displayValue?.toFixed(6)} ppb
+                                      </Typography>
+                                    )}
+                                    
+                                    <Typography variant="caption" color="text.secondary">
+                                      {item.data.latest?.datetime?.local ?
+                                        new Date(item.data.latest.datetime.local).toLocaleString() :
+                                        'No timestamp'
+                                      }
+                                    </Typography>
+                                    
+                                    {item.data.summary && (
+                                      <Typography variant="caption" display="block" color="text.secondary">
+                                        Avg: {typeof item.data.summary.avg === 'number' ? item.data.summary.avg.toFixed(6) : item.data.summary.avg} |
+                                        Min: {typeof item.data.summary.min === 'number' ? item.data.summary.min.toFixed(6) : item.data.summary.min} |
+                                        Max: {typeof item.data.summary.max === 'number' ? item.data.summary.max.toFixed(6) : item.data.summary.max}
+                                        {isNO2 ? ` ${item.sensor.parameter_units}` : ''}
+                                      </Typography>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" color="error">
+                              {item.error || 'No data available'}
+                            </Typography>
+                          )}
+                        </Paper>
+                      ))}
+                    </Box>
+                  ) : data.sensors && data.sensors.length > 0 ? (
+                    <Paper variant="outlined" sx={{ p: 1.5, mb: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Station has {data.sensors.length} sensors. Showing data for PM2.5, PM10, O3, CO, SO2, and NO2 only.
+                        No target pollutant sensors found at this station.
+                      </Typography>
+                    </Paper>
+                  ) : data.stationType === 'Pandora' ? (
+                    <Paper variant="outlined" sx={{ p: 1.5, mb: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Pandora stations provide atmospheric composition data. 
+                        Real-time sensor data integration coming soon.
+                      </Typography>
+                    </Paper>
+                  ) : (
+                    <Paper variant="outlined" sx={{ p: 1.5, mb: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        No sensors available for this station.
+                      </Typography>
+                    </Paper>
+                  )}
+                </Box>
+              )}
+
+              {/* 附近監測站空氣品質數據 */}
+              {!data.isStation && (data.nearbyStationsData || data.loadingNearbyData) && (
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
+                    Air Quality in 10km Radius
+                  </Typography>
+                  
+                  {data.loadingNearbyData ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
+                      <CircularProgress size={24} />
+                      <Typography variant="body2" sx={{ ml: 1 }}>
+                        Loading nearby station data...
+                      </Typography>
+                    </Box>
+                  ) : data.nearbyStationsData && data.nearbyStationsData.nearbyStationsCount > 0 ? (
+                    <Box>
+                      <Typography variant="body2" color="success.main" sx={{ mb: 2 }}>
+                        Found {data.nearbyStationsData.nearbyStationsCount} monitoring stations within 10km
+                      </Typography>
+
+                      {/* 顯示指定污染物的最大值 */}
+                      {Object.entries(data.nearbyStationsData.pollutantData)
+                        .filter(([pollutant, pollutantInfo]) => pollutantInfo.values.length > 0)
+                        .map(([pollutant, pollutantInfo]) => (
+                          <Paper key={pollutant} variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                              <Chip
+                                label={pollutant.toUpperCase()}
+                                size="small"
+                                color="success"
+                                variant="outlined"
+                              />
+                              <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                                ({pollutantInfo.values.length} sensors)
+                              </Typography>
+                            </Box>
+
+                            <Typography variant="h6" fontWeight="600">
+                              {pollutantInfo.max !== null ? pollutantInfo.max.toFixed(6) : '—'} {pollutantInfo.unit || 'μg/m³'}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {pollutantInfo.max !== null 
+                                ? `From the maximum of ${pollutantInfo.values.length} active sensor${pollutantInfo.values.length > 1 ? 's' : ''}`
+                                : 'No recent data available'
+                              }
+                            </Typography>
+                          </Paper>
+                        ))}
+
+                      {/* 如果沒有任何污染物數據 */}
+                      {Object.values(data.nearbyStationsData.pollutantData).every(p => p.values.length === 0) && (
+                        <Paper variant="outlined" sx={{ p: 1.5, mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            No PM2.5, PM10, O3, CO, SO2, or NO2 data available from nearby stations.
+                          </Typography>
+                        </Paper>
+                      )}
+                    </Box>
+                  ) : (
+                    <Paper variant="outlined" sx={{ p: 1.5, mb: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        No monitoring stations found within 10km radius.
+                      </Typography>
+                    </Paper>
+                  )}
+                </Box>
+              )}
+
+              {/* 預留空間給沒有附近監測站數據的情況 */}
+              {!data.isStation && !data.nearbyStationsData && !data.loadingNearbyData && (
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
+                    Air Quality
+                  </Typography>
+                  <Paper variant="outlined" sx={{ p: 1.5, mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Click anywhere on the map to explore local air quality data.
+                    </Typography>
+                  </Paper>
+                </Box>
+              )}
+            </Box>
           </Box>
         )}
       </Box>

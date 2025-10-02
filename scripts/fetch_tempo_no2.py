@@ -10,6 +10,31 @@ from rasterio.crs import CRS
 import numpy as np
 import subprocess
 
+
+def _build_color_ramp():
+    """建立 0-255 的平滑顏色表 (RGBA)。"""
+    anchors = [
+        (0, (0, 0, 0, 0)),            # 透明背景
+        (1, (0, 0, 140, 255)),        # 深藍
+        (64, (0, 120, 255, 255)),     # 藍
+        (128, (0, 255, 170, 255)),    # 綠
+        (192, (255, 255, 0, 255)),    # 黃
+        (255, (255, 0, 0, 255)),      # 紅
+    ]
+
+    ramp = {}
+    for (start_idx, start_col), (end_idx, end_col) in zip(anchors[:-1], anchors[1:]):
+        span = max(end_idx - start_idx, 1)
+        for i in range(span):
+            t = i / span
+            rgba = tuple(
+                int(round(start_col[channel] + t * (end_col[channel] - start_col[channel])))
+                for channel in range(4)
+            )
+            ramp[start_idx + i] = rgba
+    ramp[anchors[-1][0]] = anchors[-1][1]
+    return ramp
+
 # 允許透過環境變數覆寫 NetCDF 引擎，預設沿用 h5netcdf 以支援 NetCDF4 群組
 NETCDF_ENGINE = os.environ.get("TEMPO_NETCDF_ENGINE", "h5netcdf")
 
@@ -307,12 +332,24 @@ def create_colored_geotiff(geotiff_file, output_dir="../public/tempo/geotiff"):
             print(f"  實際平均值: {data_mean:.6e}")
             print(f"  實際標準差: {data_std:.6e}")
             
-            # 正規化到 0-255 範圍，使用更柔和的飽和度處理
-            normalized_data = np.where(
+            # 正規化到 0-255 範圍，保留 0 給無資料
+            range_span = data_max - data_min
+            if range_span <= 0:
+                scaled = np.zeros_like(data, dtype=np.float32)
+            else:
+                scaled = (data - data_min) / range_span
+
+            normalized = np.where(
                 np.isfinite(data),
-                np.clip((data - data_min) / (data_max - data_min) * 254 + 1, 1, 255),
-                0  # NaN 值設為 0 (透明)
-            ).astype(np.uint8)
+                np.clip(scaled, 0, 1),
+                np.nan
+            )
+
+            normalized_data = np.where(
+                np.isnan(normalized),
+                0,
+                (normalized * 255).astype(np.uint8)
+            )
             
             # 更新 profile
             profile.update(
@@ -331,37 +368,9 @@ def create_colored_geotiff(geotiff_file, output_dir="../public/tempo/geotiff"):
             with rasterio.open(colored_path, 'w', **profile) as dst:
                 dst.write(normalized_data, 1)
                 
-                # 創建極度透明的顏色表，只有高濃度污染區域才顯著可見
-                # 大幅增加透明度，讓地圖文字和站點資訊清晰可見
-                colormap = {
-                    0: (0, 0, 0, 0),          # 完全透明 (無數據)
-                    1: (0, 0, 0, 0),          # 完全透明 (極低濃度)
-                    16: (0, 0, 0, 0),         # 完全透明 (極低濃度)
-                    32: (0, 100, 255, 15),    # 極淺藍，幾乎透明
-                    48: (0, 150, 255, 20),    # 淺藍，極透明
-                    64: (0, 200, 255, 30),    # 淺青藍，很透明
-                    80: (0, 255, 255, 40),    # 青色，很透明
-                    96: (50, 255, 200, 50),   # 青綠，透明
-                    112: (100, 255, 150, 60), # 淺綠，透明
-                    128: (150, 255, 100, 70), # 黃綠，透明 (中等濃度)
-                    144: (200, 255, 50, 80),  # 淺黃，透明
-                    160: (255, 255, 0, 100),  # 黃色，半透明
-                    176: (255, 200, 0, 130),  # 橙黃，半透明
-                    192: (255, 150, 0, 160),  # 橙色，較透明 (高濃度)
-                    208: (255, 100, 0, 200),  # 橙紅，不太透明
-                    224: (255, 50, 0, 230),   # 紅橙，較不透明
-                    240: (255, 20, 0, 255),   # 紅色，不透明
-                    255: (200, 0, 0, 255)     # 深紅，不透明 (極高濃度)
-                }
-                
-                dst.write_colormap(1, colormap)
-                
-                # 輸出顏色對應的 NO2 濃度範圍資訊
-                print(f"極度透明的顏色映射說明 (NO2 濃度: 0 - 5×10¹⁵ molecules/cm²):")
-                print(f"  完全透明區域 (0-64):   極低至低濃度，完全不干擾地圖")
-                print(f"  極透明區域 (64-128):   低至中低濃度，幾乎看不見")
-                print(f"  半透明區域 (128-192):  中等濃度，輕微可見")
-                print(f"  可見區域 (192-255):    高至極高濃度，明確顯示污染")
+                dst.write_colormap(1, _build_color_ramp())
+
+                print("顏色映射: 透明 → 藍 → 綠 → 黃 → 紅，對應濃度由低到高")
             
             print(f"✓ 著色 GeoTIFF 創建完成: {colored_path}")
             return str(colored_path)

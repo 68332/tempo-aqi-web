@@ -6,7 +6,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // US border geo json from: https://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_040_00_500k.json
 // exclude: Alaska, Hawaii, Puerto Rico
 
-export default function MapView({ onSelect, resetToHome, showTempoLayer }) {
+export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpenAQLayer, showPandoraLayer, showTOLNetLayer }) {
   // 管理標記狀態和地圖引用
   const [clickMarker, setClickMarker] = React.useState(null);
   const mapRef = React.useRef(null);
@@ -99,7 +99,78 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer }) {
     return R * c;
   };
 
-  // 找出範圍內的 OpenAQ 監測站並獲取指定污染物數據
+  // 從 TEMPO tiles 獲取 NO2 數值的函數
+  const getTEMPOValue = async (lng, lat, zoom = 8) => {
+    try {
+      // 計算對應的 tile 座標
+      const tileZ = Math.min(zoom, 8); // 最大 zoom 是 8
+      const tileX = Math.floor((lng + 180) / 360 * Math.pow(2, tileZ));
+      const tileY = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, tileZ));
+      
+      // 構建 tile URL
+      const tileUrl = `${window.location.origin}/tempo/tiles/${tileZ}/${tileX}/${tileY}.png`;
+      
+      // 計算在 tile 內的像素位置
+      const tileSize = 256;
+      const pixelX = Math.floor(((lng + 180) / 360 * Math.pow(2, tileZ) - tileX) * tileSize);
+      const pixelY = Math.floor(((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, tileZ) - tileY) * tileSize);
+      
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        img.onload = () => {
+          try {
+            // 創建 canvas 來讀取像素數據
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            
+            // 獲取指定像素的 RGBA 值
+            const imageData = ctx.getImageData(pixelX, pixelY, 1, 1);
+            const [r, g, b, a] = imageData.data;
+            
+            // 如果是透明像素，表示沒有數據
+            if (a === 0) {
+              resolve(null);
+              return;
+            }
+            
+            // 根據顏色映射估算 NO2 濃度
+            // 這是基於我們之前設定的顏色映射的反向計算
+            const intensity = (r + g + b) / 3; // 簡化的強度計算
+            const normalizedValue = intensity / 255;
+            
+            // 假設數據範圍是 0 到 5e15 molecules/cm²
+            const estimatedValue = normalizedValue * 5e15;
+            
+            resolve({
+              value: estimatedValue,
+              unit: 'molecules/cm²',
+              coordinates: { lng, lat },
+              tileInfo: { z: tileZ, x: tileX, y: tileY, pixelX, pixelY },
+              rgba: { r, g, b, a }
+            });
+          } catch (error) {
+            console.error('Error reading pixel data:', error);
+            resolve(null);
+          }
+        };
+        
+        img.onerror = () => {
+          console.log('TEMPO tile not found or failed to load');
+          resolve(null);
+        };
+        
+        img.src = tileUrl;
+      });
+    } catch (error) {
+      console.error('Error getting TEMPO value:', error);
+      return null;
+    }
+  };
   const findNearbyStationsData = async (clickLat, clickLng, radiusKm = 10) => {
     try {
       // 獲取所有 OpenAQ 監測站的 GeoJSON 數據
@@ -386,12 +457,17 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer }) {
           stateName, 
           isStation: false,
           nearbyStationsData: null,
-          loadingNearbyData: true
+          loadingNearbyData: true,
+          tempoData: null,
+          loadingTempoData: true
         });
       }
 
-      // 獲取10公里範圍內的監測站數據
-      findNearbyStationsData(lat, lng, 10).then(nearbyData => {
+      // 同時獲取10公里範圍內的監測站數據和 TEMPO 數據
+      Promise.all([
+        findNearbyStationsData(lat, lng, 10),
+        getTEMPOValue(lng, lat)
+      ]).then(([nearbyData, tempoValue]) => {
         if (onSelect) {
           onSelect({ 
             lng, 
@@ -399,7 +475,9 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer }) {
             stateName, 
             isStation: false,
             nearbyStationsData: nearbyData,
-            loadingNearbyData: false
+            loadingNearbyData: false,
+            tempoData: tempoValue,
+            loadingTempoData: false
           });
         }
       });
@@ -474,7 +552,7 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer }) {
             type="raster"
             source="tempo-no2"
             paint={{
-              "raster-opacity": 0.15,  // 大幅降低透明度，讓地圖資訊更清楚
+              "raster-opacity": 0.07,  // 大幅降低透明度，讓地圖資訊更清楚
               "raster-fade-duration": 300,
               "raster-brightness-max": 1.0,
               "raster-brightness-min": 0.0,
@@ -485,71 +563,83 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer }) {
         </>
       )}
 
-      {/* OpenAQ 監測站 */}
-      <Source id="openaq-us-stations" type="geojson" data="/data/openaq-us-stations.geojson" />
-      <Layer
-        id="openaq-us-stations-points"
-        type="circle"
-        source="openaq-us-stations"
-        paint={{
-          "circle-radius": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            3, 3,
-            8, 6,
-            15, 12
-          ],
-          "circle-color": "#8B5CF6",
-          "circle-stroke-color": "#FFFFFF",
-          "circle-stroke-width": 1,
-          "circle-opacity": 0.8
-        }}
-      />
+      {/* OpenAQ 監測站 - 條件顯示 */}
+      {showOpenAQLayer && (
+        <>
+          <Source id="openaq-us-stations" type="geojson" data="/data/openaq-us-stations.geojson" />
+          <Layer
+            id="openaq-us-stations-points"
+            type="circle"
+            source="openaq-us-stations"
+            paint={{
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                3, 3,
+                8, 6,
+                15, 12
+              ],
+              "circle-color": "#8B5CF6",
+              "circle-stroke-color": "#FFFFFF",
+              "circle-stroke-width": 1,
+              "circle-opacity": 0.8
+            }}
+          />
+        </>
+      )}
 
-      {/* Pandora 監測站 */}
-      <Source id="pandora-us-stations" type="geojson" data="/data/pandora-us-stations.geojson" />
-      <Layer
-        id="pandora-us-stations-points"
-        type="circle"
-        source="pandora-us-stations"
-        paint={{
-          "circle-radius": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            3, 3,
-            8, 6,
-            15, 12
-          ],
-          "circle-color": "#0b204fff",
-          "circle-stroke-color": "#FFFFFF",
-          "circle-stroke-width": 1,
-          "circle-opacity": 0.8
-        }}
-      />
+      {/* Pandora 監測站 - 條件顯示 */}
+      {showPandoraLayer && (
+        <>
+          <Source id="pandora-us-stations" type="geojson" data="/data/pandora-us-stations.geojson" />
+          <Layer
+            id="pandora-us-stations-points"
+            type="circle"
+            source="pandora-us-stations"
+            paint={{
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                3, 3,
+                8, 6,
+                15, 12
+              ],
+              "circle-color": "#0b204fff",
+              "circle-stroke-color": "#FFFFFF",
+              "circle-stroke-width": 1,
+              "circle-opacity": 0.8
+            }}
+          />
+        </>
+      )}
 
-      {/* TOLNet 監測站 */}
-      <Source id="TOLNet-us-stations" type="geojson" data="/data/TOLnet-us-stations.geojson" />
-      <Layer
-        id="TOLNet-us-stations-points"
-        type="circle"
-        source="TOLNet-us-stations"
-        paint={{
-          "circle-radius": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            3, 3,
-            8, 6,
-            15, 12
-          ],
-          "circle-color": "#a8d36cff",
-          "circle-stroke-color": "#FFFFFF",
-          "circle-stroke-width": 1,
-          "circle-opacity": 0.8
-        }}
-      />
+      {/* TOLNet 監測站 - 條件顯示 */}
+      {showTOLNetLayer && (
+        <>
+          <Source id="TOLNet-us-stations" type="geojson" data="/data/TOLnet-us-stations.geojson" />
+          <Layer
+            id="TOLNet-us-stations-points"
+            type="circle"
+            source="TOLNet-us-stations"
+            paint={{
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                3, 3,
+                8, 6,
+                15, 12
+              ],
+              "circle-color": "#a8d36cff",
+              "circle-stroke-color": "#FFFFFF",
+              "circle-stroke-width": 1,
+              "circle-opacity": 0.8
+            }}
+          />
+        </>
+      )}
 
       {/* 點擊標記 */}
       {clickMarker && (
