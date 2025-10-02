@@ -428,6 +428,21 @@ export default function InfoPanel({
           if (response.ok) {
             const result = await response.json();
             console.log(`Sensor ${sensor.id} data:`, result); // Debug
+            
+            // 詳細檢查數值精度
+            if (result.results && result.results[0] && result.results[0].latest) {
+              const latestValue = result.results[0].latest.value;
+              console.log(`Sensor ${sensor.id} raw value type:`, typeof latestValue);
+              console.log(`Sensor ${sensor.id} raw value:`, latestValue);
+              console.log(`Sensor ${sensor.id} raw value precision:`, latestValue?.toString());
+              
+              // 檢查是否為科學記號
+              if (typeof latestValue === 'number') {
+                console.log(`Sensor ${sensor.id} exponential:`, latestValue.toExponential());
+                console.log(`Sensor ${sensor.id} fixed(10):`, latestValue.toFixed(10));
+              }
+            }
+            
             return {
               sensor: sensor,
               data: result.results[0],
@@ -1013,18 +1028,46 @@ export default function InfoPanel({
                                 const displayValue = isNO2 ? convertNO2ToPPB(originalValue, item.sensor.parameter_units) : originalValue;
                                 const displayUnit = isNO2 ? 'ppb' : item.sensor.parameter_units;
                                 
+                                // 完全保留數值精度的格式化函數
+                                const formatValue = (value) => {
+                                  if (typeof value !== 'number') return value;
+                                  
+                                  // 完全保留原始精度，但限制顯示格式
+                                  const valueStr = value.toString();
+                                  
+                                  // 如果數值很小或很大，使用科學記號
+                                  if ((Math.abs(value) < 0.001 || Math.abs(value) >= 100000) && 
+                                      value !== 0 && !valueStr.includes('e')) {
+                                    return value.toExponential(6);
+                                  }
+                                  
+                                  // 如果原始值已經是科學記號格式，直接返回
+                                  if (valueStr.includes('e')) {
+                                    return valueStr;
+                                  }
+                                  
+                                  // 對於一般數值，限制最多顯示6位小數
+                                  if (valueStr.includes('.')) {
+                                    const [intPart, decPart] = valueStr.split('.');
+                                    if (decPart.length > 6) {
+                                      return `${intPart}.${decPart.substring(0, 6)}`;
+                                    }
+                                  }
+                                  
+                                  // 其他情況直接返回原始數值字串
+                                  return valueStr;
+                                };
+                                
                                 return (
                                   <>
                                     <Typography variant="h6" fontWeight="600">
-                                      {typeof displayValue === 'number' ? 
-                                        displayValue.toFixed(6) : 
-                                        displayValue} {displayUnit}
+                                      {formatValue(displayValue)} {displayUnit}
                                     </Typography>
                                     
                                     {/* 對於 NO2 顯示原始值和轉換說明 */}
                                     {isNO2 && originalValue !== displayValue && (
                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                        Original: {originalValue?.toFixed(6)} {item.sensor.parameter_units} → {displayValue?.toFixed(6)} ppb
+                                        Original: {formatValue(originalValue)} {item.sensor.parameter_units} → {formatValue(displayValue)} ppb
                                       </Typography>
                                     )}
                                     
@@ -1037,9 +1080,9 @@ export default function InfoPanel({
                                     
                                     {item.data.summary && (
                                       <Typography variant="caption" display="block" color="text.secondary">
-                                        Avg: {typeof item.data.summary.avg === 'number' ? item.data.summary.avg.toFixed(6) : item.data.summary.avg} |
-                                        Min: {typeof item.data.summary.min === 'number' ? item.data.summary.min.toFixed(6) : item.data.summary.min} |
-                                        Max: {typeof item.data.summary.max === 'number' ? item.data.summary.max.toFixed(6) : item.data.summary.max}
+                                        Avg: {formatValue(item.data.summary.avg)} |
+                                        Min: {formatValue(item.data.summary.min)} |
+                                        Max: {formatValue(item.data.summary.max)}
                                         {isNO2 ? ` ${item.sensor.parameter_units}` : ''}
                                       </Typography>
                                     )}
@@ -1102,31 +1145,63 @@ export default function InfoPanel({
                       {/* 顯示指定污染物的最大值 */}
                       {Object.entries(data.nearbyStationsData.pollutantData)
                         .filter(([pollutant, pollutantInfo]) => pollutantInfo.values.length > 0)
-                        .map(([pollutant, pollutantInfo]) => (
-                          <Paper key={pollutant} variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                              <Chip
-                                label={pollutant.toUpperCase()}
-                                size="small"
-                                color="success"
-                                variant="outlined"
-                              />
-                              <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                                ({pollutantInfo.values.length} sensors)
-                              </Typography>
-                            </Box>
-
-                            <Typography variant="h6" fontWeight="600">
-                              {pollutantInfo.max !== null ? pollutantInfo.max.toFixed(6) : '—'} {pollutantInfo.unit || 'μg/m³'}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {pollutantInfo.max !== null 
-                                ? `From the maximum of ${pollutantInfo.values.length} active sensor${pollutantInfo.values.length > 1 ? 's' : ''}`
-                                : 'No recent data available'
+                        .map(([pollutant, pollutantInfo]) => {
+                          // 完全保留數值精度的格式化函數
+                          const formatValue = (value) => {
+                            if (typeof value !== 'number') return value;
+                            
+                            // 完全保留原始精度，但限制顯示格式
+                            const valueStr = value.toString();
+                            
+                            // 如果數值很小或很大，使用科學記號
+                            if ((Math.abs(value) < 0.001 || Math.abs(value) >= 100000) && 
+                                value !== 0 && !valueStr.includes('e')) {
+                              return value.toExponential(6);
+                            }
+                            
+                            // 如果原始值已經是科學記號格式，直接返回
+                            if (valueStr.includes('e')) {
+                              return valueStr;
+                            }
+                            
+                            // 對於一般數值，限制最多顯示6位小數
+                            if (valueStr.includes('.')) {
+                              const [intPart, decPart] = valueStr.split('.');
+                              if (decPart.length > 6) {
+                                return `${intPart}.${decPart.substring(0, 6)}`;
                               }
-                            </Typography>
-                          </Paper>
-                        ))}
+                            }
+                            
+                            // 其他情況直接返回原始數值字串
+                            return valueStr;
+                          };
+                          
+                          return (
+                            <Paper key={pollutant} variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                <Chip
+                                  label={pollutant.toUpperCase()}
+                                  size="small"
+                                  color="success"
+                                  variant="outlined"
+                                />
+                                <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                                  ({pollutantInfo.values.length} sensors)
+                                </Typography>
+                              </Box>
+
+                              <Typography variant="h6" fontWeight="600">
+                                {pollutantInfo.max !== null ? formatValue(pollutantInfo.max) : '—'} {pollutantInfo.unit || 'μg/m³'}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {pollutantInfo.max !== null 
+                                  ? `From the maximum of ${pollutantInfo.values.length} active sensor${pollutantInfo.values.length > 1 ? 's' : ''}`
+                                  : 'No recent data available'
+                                }
+                              </Typography>
+                            </Paper>
+                          );
+                        })}
 
                       {/* 如果沒有任何污染物數據 */}
                       {Object.values(data.nearbyStationsData.pollutantData).every(p => p.values.length === 0) && (
