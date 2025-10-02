@@ -9,10 +9,12 @@ import {
   useMediaQuery,
   useTheme,
   CircularProgress,
-  Chip
+  Chip,
+  Switch,
+  FormControlLabel
 } from '@mui/material';
 
-export default function InfoPanel({ open, data, onClose }) {
+export default function InfoPanel({ open, data, onClose, showTempoLayer, onToggleTempoLayer }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -403,6 +405,39 @@ export default function InfoPanel({ open, data, onClose }) {
               Click anywhere on the map to explore local air quality data from these monitoring stations.
             </Typography>
 
+            {/* 圖層控制 */}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" fontWeight="600" sx={{ mb: 1 }}>
+                Map Layers
+              </Typography>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showTempoLayer}
+                    onChange={(event) => onToggleTempoLayer(event.target.checked)}
+                    size="small"
+                    color="primary"
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      TEMPO NO₂ Satellite Data
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Real-time nitrogen dioxide measurements from space
+                    </Typography>
+                  </Box>
+                }
+                sx={{ 
+                  alignItems: 'flex-start',
+                  '& .MuiFormControlLabel-label': {
+                    ml: 1
+                  }
+                }}
+              />
+            </Box>
+
             <Divider sx={{ my: 2 }} />
           </Box>
         ) : (
@@ -454,6 +489,30 @@ export default function InfoPanel({ open, data, onClose }) {
                 </Typography>
               </Grid>
             </Grid>
+
+            {/* 圖層控制 - 在選中數據時也顯示 */}
+            <Box sx={{ mb: 2 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showTempoLayer}
+                    onChange={(event) => onToggleTempoLayer(event.target.checked)}
+                    size="small"
+                    color="primary"
+                  />
+                }
+                label={
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                    TEMPO NO₂ Layer
+                  </Typography>
+                }
+                sx={{ 
+                  '& .MuiFormControlLabel-label': {
+                    ml: 1
+                  }
+                }}
+              />
+            </Box>
 
             {/* AQI 顯示 */}
             {aqiData && (

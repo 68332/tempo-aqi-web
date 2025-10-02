@@ -6,10 +6,58 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // US border geo json from: https://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_040_00_500k.json
 // exclude: Alaska, Hawaii, Puerto Rico
 
-export default function MapView({ onSelect, resetToHome }) {
+export default function MapView({ onSelect, resetToHome, showTempoLayer }) {
   // 管理標記狀態和地圖引用
   const [clickMarker, setClickMarker] = React.useState(null);
   const mapRef = React.useRef(null);
+
+  // 添加地圖載入事件監聽器
+  const handleMapLoad = () => {
+    console.log('🗺️ Map loaded successfully');
+    
+    if (mapRef.current) {
+      const map = mapRef.current;
+      
+      // 監聽 TEMPO NO₂ 圖層的載入事件
+      map.on('sourcedata', (e) => {
+        if (e.sourceId === 'tempo-no2') {
+          if (e.isSourceLoaded) {
+            console.log('🛰️ TEMPO NO₂ source loaded successfully');
+          }
+          if (e.tile) {
+            console.log(`📡 TEMPO NO₂ tile loaded: ${e.tile.tileID.canonical.z}/${e.tile.tileID.canonical.x}/${e.tile.tileID.canonical.y}`);
+          }
+        }
+      });
+
+      // 監聽圖層錯誤
+      map.on('error', (e) => {
+        console.error('❌ Map error:', e);
+        if (e.sourceId === 'tempo-no2') {
+          console.error('❌ TEMPO NO₂ source error:', e.error);
+        }
+      });
+
+      // 監聽 tile 載入錯誤
+      map.on('styleimagemissing', (e) => {
+        console.error('❌ Style image missing:', e.id);
+      });
+
+      // 監聽 source 載入錯誤
+      map.on('data', (e) => {
+        if (e.sourceId === 'tempo-no2' && e.sourceDataType === 'tiles') {
+          console.log('📊 TEMPO NO₂ tiles data event:', e);
+        }
+      });
+
+      // 監聽 tile 錯誤
+      map.on('sourcedataloading', (e) => {
+        if (e.sourceId === 'tempo-no2') {
+          console.log('⏳ TEMPO NO₂ source loading...');
+        }
+      });
+    }
+  };
 
   // 初始視角設定
   const initialViewState = { longitude: -95.7, latitude: 37.1, zoom: 3.6 };
@@ -177,6 +225,56 @@ export default function MapView({ onSelect, resetToHome }) {
     }
   }, [resetToHome]);
 
+  // 檢查 TEMPO tiles URL 並記錄調試信息
+  React.useEffect(() => {
+    const tilesUrl = `${window.location.origin}/tempo/tiles/{z}/{x}/{y}.png`;
+    console.log('🔗 TEMPO tiles URL pattern:', tilesUrl);
+    
+    // 測試多個具體的 tile URL
+    const testTileUrls = [
+      `${window.location.origin}/tempo/tiles/4/2/10.png`,
+      `${window.location.origin}/tempo/tiles/3/1/5.png`,
+      `${window.location.origin}/tempo/tiles/5/4/20.png`
+    ];
+    
+    testTileUrls.forEach(testTileUrl => {
+      console.log('🧪 Testing tile URL:', testTileUrl);
+      
+      // 嘗試載入一個測試 tile
+      fetch(testTileUrl)
+        .then(response => {
+          if (response.ok) {
+            console.log('✅ Test tile loaded successfully:', testTileUrl);
+            
+            // 檢查是否是有效的圖片
+            return response.blob();
+          } else {
+            console.error('❌ Test tile failed to load:', response.status, testTileUrl);
+          }
+        })
+        .then(blob => {
+          if (blob && blob.type.startsWith('image/')) {
+            console.log('✅ Test tile is valid image:', blob.type, blob.size, 'bytes');
+            
+            // 嘗試創建 Image 對象來測試解碼
+            const img = new Image();
+            img.onload = () => {
+              console.log('✅ Test tile decoded successfully:', img.width, 'x', img.height);
+            };
+            img.onerror = (error) => {
+              console.error('❌ Test tile decode error:', error);
+            };
+            img.src = URL.createObjectURL(blob);
+          } else if (blob) {
+            console.error('❌ Test tile is not an image:', blob.type);
+          }
+        })
+        .catch(error => {
+          console.error('❌ Test tile fetch error:', error, testTileUrl);
+        });
+    });
+  }, []);
+
   const handleMapClick = (event) => {
     const { lng, lat } = event.lngLat;
 
@@ -321,6 +419,7 @@ export default function MapView({ onSelect, resetToHome }) {
       minZoom={3}
       maxZoom={15}
       onClick={handleMapClick}
+      onLoad={handleMapLoad}
     >
       {/* 把 us-states.geojson 加進來 */}
       <Source id="us-states" type="geojson" data="/data/us-states.geojson" />
@@ -355,6 +454,36 @@ export default function MapView({ onSelect, resetToHome }) {
           "line-width": 1
         }}
       />
+
+      {/* TEMPO NO₂ Satellite Data - 條件顯示 */}
+      {showTempoLayer && (
+        <>
+          <Source
+            id="tempo-no2"
+            type="raster"
+            tiles={[
+              `${window.location.origin}/tempo/tiles/{z}/{x}/{y}.png`
+            ]}
+            tileSize={256}
+            minzoom={2}
+            maxzoom={8}
+            scheme="xyz"
+          />
+          <Layer
+            id="tempo-no2-layer"
+            type="raster"
+            source="tempo-no2"
+            paint={{
+              "raster-opacity": 0.15,  // 大幅降低透明度，讓地圖資訊更清楚
+              "raster-fade-duration": 300,
+              "raster-brightness-max": 1.0,
+              "raster-brightness-min": 0.0,
+              "raster-contrast": 0.7,
+              "raster-saturation": 0.7  // 降低飽和度，讓顏色更柔和
+            }}
+          />
+        </>
+      )}
 
       {/* OpenAQ 監測站 */}
       <Source id="openaq-us-stations" type="geojson" data="/data/openaq-us-stations.geojson" />

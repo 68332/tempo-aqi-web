@@ -7,6 +7,7 @@ export default function App() {
   const [selection, setSelection] = React.useState(null);
   const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 900);
   const [resetToHome, setResetToHome] = React.useState(false);
+  const [showTempoLayer, setShowTempoLayer] = React.useState(true); // 控制 TEMPO NO2 圖層顯示
   // selection: { lng, lat, stateName } | null
 
   React.useEffect(() => {
@@ -29,13 +30,19 @@ export default function App() {
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
       {/* 地圖：把點擊結果丟回來 */}
-      <MapView onSelect={setSelection} resetToHome={resetToHome} />
+      <MapView 
+        onSelect={setSelection} 
+        resetToHome={resetToHome} 
+        showTempoLayer={showTempoLayer}
+      />
 
       {/* 右側資訊面板（浮在地圖上） */}
       <InfoPanel
         open={!!selection}
         data={selection}
         onClose={handleResetToHome}
+        showTempoLayer={showTempoLayer}
+        onToggleTempoLayer={setShowTempoLayer}
       />
 
       {/* Footer */}
@@ -123,6 +130,26 @@ export default function App() {
             }}
           />
           <span>TOLnet Stations</span>
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px',
+          marginTop: '4px',
+          paddingTop: '4px',
+          borderTop: '1px solid rgba(55, 65, 81, 0.2)'
+        }}>
+          <div
+            style={{
+              width: '16px',
+              height: '8px',
+              background: 'linear-gradient(to right, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000)',
+              border: '1px solid #FFFFFF',
+              borderRadius: '2px',
+              flexShrink: 0
+            }}
+          />
+          <span>TEMPO NO₂ (Satellite)</span>
         </div>
       </div>
     </div>
