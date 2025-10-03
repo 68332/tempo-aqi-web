@@ -100,6 +100,39 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
   };
 
   // 從 TEMPO tiles 獲取 NO2 數值的函數
+  // 獲取 TEMPO 數據的實際觀測時間
+  const getTEMPOObservationTime = async () => {
+    try {
+      // 從 NASA CMR API 獲取最新的 TEMPO 檔案資訊
+      const response = await fetch('https://cmr.earthdata.nasa.gov:443/search/granules.json?echo_collection_id=C3685668637-LARC_CLOUD&sort_key=-start_date&page_size=1');
+      const data = await response.json();
+      
+      if (data.feed && data.feed.entry && data.feed.entry.length > 0) {
+        const latestEntry = data.feed.entry[0];
+        
+        // 從 links 中找到 title
+        if (latestEntry.links && latestEntry.links.length > 0) {
+          const title = latestEntry.links[0].title;
+          
+          // 從檔案名稱解析時間 (格式: TEMPO_NO2_L3_NRT_V02_20251002T133140Z_S004.nc)
+          const timeMatch = title.match(/(\d{8}T\d{6}Z)/);
+          if (timeMatch) {
+            const timeString = timeMatch[1];
+            // 轉換為 ISO 格式: 20251002T133140Z -> 2025-10-02T13:31:40Z
+            const isoString = timeString.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/, '$1-$2-$3T$4:$5:$6Z');
+            return new Date(isoString);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching TEMPO observation time from CMR API:', error);
+    }
+    
+    // 如果 API 失敗，返回預設值
+    const fallbackTimeString = '2025-10-02T13:31:40Z';
+    return new Date(fallbackTimeString);
+  };
+
   const getTEMPOValue = async (lng, lat, zoom = 8) => {
     try {
       // 計算對應的 tile 座標
@@ -146,12 +179,28 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
             // 假設數據範圍是 0 到 5e15 molecules/cm²
             const estimatedValue = normalizedValue * 5e15;
             
-            resolve({
-              value: estimatedValue,
-              unit: 'molecules/cm²',
-              coordinates: { lng, lat },
-              tileInfo: { z: tileZ, x: tileX, y: tileY, pixelX, pixelY },
-              rgba: { r, g, b, a }
+            // 獲取實際觀測時間
+            getTEMPOObservationTime().then(observationTime => {
+              resolve({
+                value: estimatedValue,
+                unit: 'molecules/cm²',
+                coordinates: { lng, lat },
+                tileInfo: { z: tileZ, x: tileX, y: tileY, pixelX, pixelY },
+                rgba: { r, g, b, a },
+                observationTime: observationTime, // TEMPO 實際觀測時間
+                dataType: 'TEMPO NO2'
+              });
+            }).catch(error => {
+              console.error('Error getting observation time:', error);
+              // 如果獲取時間失敗，仍然返回數據但沒有時間
+              resolve({
+                value: estimatedValue,
+                unit: 'molecules/cm²',
+                coordinates: { lng, lat },
+                tileInfo: { z: tileZ, x: tileX, y: tileY, pixelX, pixelY },
+                rgba: { r, g, b, a },
+                dataType: 'TEMPO NO2'
+              });
             });
           } catch (error) {
             console.error('Error reading pixel data:', error);
@@ -171,6 +220,59 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
       return null;
     }
   };
+  
+  // 單位轉換函式
+  const convertO3ToPPM = (value, unit) => {
+    if (!value || !unit) return value;
+    const unitLower = unit.toLowerCase();
+    if (unitLower.includes('ppm') && !unitLower.includes('ppb')) return value;
+    if (unitLower.includes('μg/m³') || unitLower.includes('ug/m3')) {
+      return value / 1960; // μg/m³ to ppm for O3 (1 ppm = 1960 μg/m³)
+    }
+    if (unitLower.includes('ppb')) return value / 1000;
+    return value;
+  };
+
+  const convertSO2ToPPB = (value, unit) => {
+    if (!value || !unit) return value;
+    const unitLower = unit.toLowerCase();
+    if (unitLower.includes('ppb')) return value;
+    if (unitLower.includes('μg/m³') || unitLower.includes('ug/m3')) {
+      return value / 2.62; // μg/m³ to ppb for SO2
+    }
+    if (unitLower.includes('ppm')) return value * 1000;
+    return value;
+  };
+
+  const convertNO2ToPPB = (value, unit) => {
+    if (!value || !unit) return value;
+    const unitLower = unit.toLowerCase();
+    if (unitLower.includes('ppb')) return value;
+    if (unitLower.includes('μg/m³') || unitLower.includes('ug/m3')) {
+      return value / 1.88; // μg/m³ to ppb for NO2
+    }
+    if (unitLower.includes('ppm')) return value * 1000;
+    return value;
+  };
+
+  // 根據污染物類型格式化數值顯示精度
+  const formatPollutantValue = (value, paramName) => {
+    if (typeof value !== 'number' || isNaN(value)) return value;
+    
+    // NO2、SO2、PM10、PM2.5、CO 顯示到小數點後第一位
+    if (['no2', 'so2', 'pm10', 'pm25', 'co'].includes(paramName)) {
+      return value.toFixed(1);
+    }
+    
+    // O3 顯示到小數點後第三位
+    if (paramName === 'o3') {
+      return value.toFixed(3);
+    }
+    
+    // 其他情況預設顯示到第二位
+    return value.toFixed(2);
+  };
+
   const findNearbyStationsData = async (clickLat, clickLng, radiusKm = 10) => {
     try {
       // 獲取所有 OpenAQ 監測站的 GeoJSON 數據
@@ -247,17 +349,34 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
                 const latestValue = sensorData?.latest?.value;
 
                 if (latestValue !== null && latestValue !== undefined) {
-                  pollutantData[paramName].values.push(latestValue);
+                  // 進行單位轉換
+                  let convertedValue = latestValue;
+                  let convertedUnit = sensor.parameter_units;
+                  
+                  if (paramName === 'o3') {
+                    convertedValue = convertO3ToPPM(latestValue, sensor.parameter_units);
+                    convertedUnit = 'ppm';
+                  } else if (paramName === 'so2') {
+                    convertedValue = convertSO2ToPPB(latestValue, sensor.parameter_units);
+                    convertedUnit = 'ppb';
+                  } else if (paramName === 'no2') {
+                    convertedValue = convertNO2ToPPB(latestValue, sensor.parameter_units);
+                    convertedUnit = 'ppb';
+                  }
+                  
+                  pollutantData[paramName].values.push(convertedValue);
                   pollutantData[paramName].stations.push({
                     stationName: station.properties.name,
                     sensorId: sensor.id,
-                    unit: sensor.parameter_units,
-                    value: latestValue,
+                    unit: convertedUnit,
+                    value: convertedValue,
+                    originalValue: latestValue,
+                    originalUnit: sensor.parameter_units,
                     timestamp: sensorData?.latest?.datetime?.local
                   });
 
                   if (!pollutantData[paramName].unit) {
-                    pollutantData[paramName].unit = sensor.parameter_units;
+                    pollutantData[paramName].unit = convertedUnit;
                   }
                 }
               } else {

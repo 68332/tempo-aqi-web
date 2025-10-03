@@ -34,6 +34,47 @@ export default function InfoPanel({
   const [nearbyDataLoading, setNearbyDataLoading] = React.useState(false);
   const [titleKey, setTitleKey] = React.useState(0);
   const [aqiData, setAqiData] = React.useState(null);
+  const [tempoObservationTime, setTempoObservationTime] = React.useState(null);
+  
+  // 獲取 TEMPO 數據的觀測時間（與 MapView 中的邏輯一致）
+  const getTEMPOObservationTime = async () => {
+    try {
+      // 從 NASA CMR API 獲取最新的 TEMPO 檔案資訊
+      const response = await fetch('https://cmr.earthdata.nasa.gov:443/search/granules.json?echo_collection_id=C3685668637-LARC_CLOUD&sort_key=-start_date&page_size=1');
+      const data = await response.json();
+      
+      if (data.feed && data.feed.entry && data.feed.entry.length > 0) {
+        const latestEntry = data.feed.entry[0];
+        
+        // 從 links 中找到 title
+        if (latestEntry.links && latestEntry.links.length > 0) {
+          const title = latestEntry.links[0].title;
+          
+          // 從檔案名稱解析時間 (格式: TEMPO_NO2_L3_NRT_V02_20251002T133140Z_S004.nc)
+          const timeMatch = title.match(/(\d{8}T\d{6}Z)/);
+          if (timeMatch) {
+            const timeString = timeMatch[1];
+            // 轉換為 ISO 格式: 20251002T133140Z -> 2025-10-02T13:31:40Z
+            const isoString = timeString.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/, '$1-$2-$3T$4:$5:$6Z');
+            return new Date(isoString);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching TEMPO observation time from CMR API:', error);
+    }
+    
+    // 如果 API 失敗，返回預設值
+    const fallbackTimeString = '2025-10-02T13:31:40Z';
+    return new Date(fallbackTimeString);
+  };
+
+  // 在組件載入時獲取 TEMPO 觀測時間
+  React.useEffect(() => {
+    getTEMPOObservationTime().then(time => {
+      setTempoObservationTime(time);
+    });
+  }, []);
 
   // 當 data 改變時觸發標題動畫
   React.useEffect(() => {
@@ -260,6 +301,78 @@ export default function InfoPanel({
     return value;
   };
 
+  // 將不同單位的 O3 轉換為 ppb (AQI 計算標準單位)
+  const convertO3ToPPM = (value, unit) => {
+    if (!value || !unit) return value;
+    
+    const unitLower = unit.toLowerCase();
+    
+    // 如果已經是 ppm，直接返回
+    if (unitLower.includes('ppm') && !unitLower.includes('ppb')) {
+      return value;
+    }
+    
+    // 如果是 μg/m³，轉換為 ppm
+    // O3 分子量 = 47.998 g/mol
+    // 在標準條件下 (20°C, 1 atm): 1 ppm = 1960 μg/m³
+    if (unitLower.includes('μg/m³') || unitLower.includes('ug/m3')) {
+      return value / 1960; // μg/m³ to ppm
+    }
+    
+    // 如果是 ppb，轉換為 ppm
+    if (unitLower.includes('ppb')) {
+      return value / 1000; // ppb to ppm
+    }
+    
+    // 預設假設是 ppb
+    return value;
+  };
+
+  // 將不同單位的 SO2 轉換為 ppb (AQI 計算標準單位)
+  const convertSO2ToPPB = (value, unit) => {
+    if (!value || !unit) return value;
+    
+    const unitLower = unit.toLowerCase();
+    
+    // 如果已經是 ppb，直接返回
+    if (unitLower.includes('ppb')) {
+      return value;
+    }
+    
+    // 如果是 μg/m³，轉換為 ppb
+    // SO2 分子量 = 64.066 g/mol
+    // 在標準條件下 (20°C, 1 atm): 1 ppb = 2.62 μg/m³
+    if (unitLower.includes('μg/m³') || unitLower.includes('ug/m3')) {
+      return value / 2.62; // μg/m³ to ppb
+    }
+    
+    // 如果是 ppm，轉換為 ppb
+    if (unitLower.includes('ppm')) {
+      return value * 1000; // ppm to ppb
+    }
+    
+    // 預設假設是 ppb
+    return value;
+  };
+
+  // 根據污染物類型格式化數值顯示精度
+  const formatPollutantValue = (value, paramName) => {
+    if (typeof value !== 'number' || isNaN(value)) return value;
+    
+    // NO2、SO2、PM10、PM2.5、CO 顯示到小數點後第一位
+    if (['no2', 'so2', 'pm10', 'pm25', 'co'].includes(paramName)) {
+      return value.toFixed(1);
+    }
+    
+    // O3 顯示到小數點後第三位
+    if (paramName === 'o3') {
+      return value.toFixed(3);
+    }
+    
+    // 其他情況預設顯示到第二位
+    return value.toFixed(2);
+  };
+
   // 計算 AQI 當有附近監測站數據、sensor 數據或 TEMPO 數據時
   React.useEffect(() => {
     console.log('AQI calculation useEffect triggered:', {
@@ -306,16 +419,25 @@ export default function InfoPanel({
           const paramName = item.sensor.parameter_name?.toLowerCase();
           if (['pm25', 'pm10', 'o3', 'co', 'so2', 'no2'].includes(paramName)) {
             let value = item.data.latest.value;
+            let unit = item.sensor.parameter_units;
             
-            // 對於 NO2，確保轉換為 ppb 用於 AQI 計算
+            // 對於 NO2、SO2，確保轉換為 ppb 用於 AQI 計算
+            // 對於 O3，轉換為 ppm 用於 AQI 計算
             if (paramName === 'no2') {
-              value = convertNO2ToPPB(value, item.sensor.parameter_units);
+              value = convertNO2ToPPB(value, unit);
+              unit = 'ppb';
+            } else if (paramName === 'o3') {
+              value = convertO3ToPPM(value, unit);
+              unit = 'ppm';
+            } else if (paramName === 'so2') {
+              value = convertSO2ToPPB(value, unit);
+              unit = 'ppb';
             }
             
             pollutantData[paramName] = {
               max: value,
               values: [value],
-              unit: paramName === 'no2' ? 'ppb' : item.sensor.parameter_units,
+              unit: unit,
               source: 'ground'
             };
           }
@@ -659,6 +781,16 @@ export default function InfoPanel({
               <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                 • <strong>NASA TEMPO</strong> - Satellite observations of air pollutants
               </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, ml: 2, display: 'block' }}>
+                Latest update TEMPO NO2 data: {tempoObservationTime ? tempoObservationTime.toLocaleString('en-US', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  timeZoneName: 'short'
+                }) : 'Loading...'}
+              </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                 • <strong>OpenAQ</strong> - Ground-based air quality monitoring network
               </Typography>
@@ -670,112 +802,37 @@ export default function InfoPanel({
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Click anywhere on the map to explore local air quality data from these monitoring stations.
             </Typography>
-
-            {/* 圖層控制 */}
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle2" fontWeight="600" sx={{ mb: 1 }}>
-                Map Layers
-              </Typography>
-              
-              {/* TEMPO NO₂ 衛星數據 */}
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showTempoLayer}
-                    onChange={(event) => onToggleTempoLayer(event.target.checked)}
-                    size="small"
-                    color="primary"
-                  />
-                }
-                label={
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      TEMPO NO₂ Satellite Data
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Real-time nitrogen dioxide measurements from space
-                    </Typography>
-                  </Box>
-                }
-                sx={{ 
-                  alignItems: 'flex-start',
-                  mb: 1,
-                  '& .MuiFormControlLabel-label': {
-                    ml: 1
-                  }
-                }}
-              />
-
-              {/* OpenAQ 監測站 */}
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showOpenAQLayer}
-                    onChange={(event) => onToggleOpenAQLayer(event.target.checked)}
-                    size="small"
-                    color="primary"
-                  />
-                }
-                label={
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      OpenAQ Ground Stations
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Ground-based air quality monitoring network
-                    </Typography>
-                  </Box>
-                }
-                sx={{ 
-                  alignItems: 'flex-start',
-                  mb: 1,
-                  '& .MuiFormControlLabel-label': {
-                    ml: 1
-                  }
-                }}
-              />
-
-              {/* Pandora 監測站 */}
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showPandoraLayer}
-                    onChange={(event) => onTogglePandoraLayer(event.target.checked)}
-                    size="small"
-                    color="primary"
-                  />
-                }
-                label={
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      Pandora Stations
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Atmospheric composition measurement stations
-                    </Typography>
-                  </Box>
-                }
-                sx={{ 
-                  alignItems: 'flex-start',
-                  mb: 1,
-                  '& .MuiFormControlLabel-label': {
-                    ml: 1
-                  }
-                }}
-              />
-            </Box>
-
-            <Divider sx={{ my: 2 }} />
           </Box>
         ) : (
           <Box>
             <Box sx={{ mb: 2 }}>
-              <Typography variant="caption" color="text.secondary">
-                {data.isStation ? 'Station' : 'State'}
-              </Typography>
-              <Typography variant="h6" fontWeight="600">
-                {data.isStation ? data.stationName : data.stateName}
-              </Typography>
+              <Grid container spacing={2} sx={{ mb: 1 }}>
+                <Grid size={4}>
+                  <Typography variant="caption" color="text.secondary">
+                    {data.isStation ? 'Station' : 'State'}
+                  </Typography>
+                  <Typography variant="h6" fontWeight="600">
+                    {data.isStation ? data.stationName : data.stateName}
+                  </Typography>
+                </Grid>
+                <Grid size={4}>
+                  <Typography variant="caption" color="text.secondary">
+                    Latitude
+                  </Typography>
+                  <Typography variant="body2">
+                    {data.lat.toFixed(5)}
+                  </Typography>
+                </Grid>
+                <Grid size={4}>
+                  <Typography variant="caption" color="text.secondary">
+                    Longitude
+                  </Typography>
+                  <Typography variant="body2">
+                    {data.lng.toFixed(5)}
+                  </Typography>
+                </Grid>
+              </Grid>
+              
               {data.isStation && data.provider && (
                 <Typography variant="body2" color="text.secondary">
                   Provider: {data.provider}
@@ -796,100 +853,6 @@ export default function InfoPanel({
                   Timezone: {data.timezone}
                 </Typography>
               )}
-            </Box>
-
-            <Grid container spacing={1} sx={{ mb: 2 }}>
-              <Grid size={6}>
-                <Typography variant="caption" color="text.secondary">
-                  Latitude
-                </Typography>
-                <Typography variant="body2">
-                  {data.lat.toFixed(5)}
-                </Typography>
-              </Grid>
-              <Grid size={6}>
-                <Typography variant="caption" color="text.secondary">
-                  Longitude
-                </Typography>
-                <Typography variant="body2">
-                  {data.lng.toFixed(5)}
-                </Typography>
-              </Grid>
-            </Grid>
-
-            {/* 圖層控制 - 在選中數據時也顯示 */}
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle2" fontWeight="600" sx={{ mb: 1, fontSize: '0.8rem' }}>
-                Map Layers
-              </Typography>
-              
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={showTempoLayer}
-                      onChange={(event) => onToggleTempoLayer(event.target.checked)}
-                      size="small"
-                      color="primary"
-                    />
-                  }
-                  label={
-                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                      TEMPO NO₂
-                    </Typography>
-                  }
-                  sx={{ 
-                    margin: 0,
-                    '& .MuiFormControlLabel-label': {
-                      ml: 0.5
-                    }
-                  }}
-                />
-                
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={showOpenAQLayer}
-                      onChange={(event) => onToggleOpenAQLayer(event.target.checked)}
-                      size="small"
-                      color="primary"
-                    />
-                  }
-                  label={
-                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                      OpenAQ
-                    </Typography>
-                  }
-                  sx={{ 
-                    margin: 0,
-                    '& .MuiFormControlLabel-label': {
-                      ml: 0.5
-                    }
-                  }}
-                />
-                
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={showPandoraLayer}
-                      onChange={(event) => onTogglePandoraLayer(event.target.checked)}
-                      size="small"
-                      color="primary"
-                    />
-                  }
-                  label={
-                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                      Pandora
-                    </Typography>
-                  }
-                  sx={{ 
-                    margin: 0,
-                    '& .MuiFormControlLabel-label': {
-                      ml: 0.5
-                    }
-                  }}
-                />
-              </Box>
             </Box>
 
             {/* AQI 顯示 */}
@@ -967,8 +930,22 @@ export default function InfoPanel({
                           </Box>
                           
                           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                            Confidence: {(conversion.confidence * 100).toFixed(0)}% | Real-time from TEMPO satellite
+                            Confidence: {(conversion.confidence * 100).toFixed(0)}% | TEMPO satellite observation
                           </Typography>
+                          
+                          {/* 顯示 TEMPO 實際觀測時間 */}
+                          {data.tempoData.observationTime && (
+                            <Typography variant="caption" color="primary.main" sx={{ display: 'block', mt: 0.5, fontWeight: 500 }}>
+                              🛰️ Observed: {new Date(data.tempoData.observationTime).toLocaleString('zh-TW', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                timeZoneName: 'short'
+                              })}
+                            </Typography>
+                          )}
                           
                           {conversion.uncertainty && (
                             <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
@@ -1035,10 +1012,22 @@ export default function InfoPanel({
                             <Box>
                               {(() => {
                                 const paramName = item.sensor.parameter_name?.toLowerCase();
-                                const isNO2 = paramName === 'no2';
                                 const originalValue = item.data.latest?.value;
-                                const displayValue = isNO2 ? convertNO2ToPPB(originalValue, item.sensor.parameter_units) : originalValue;
-                                const displayUnit = isNO2 ? 'ppb' : item.sensor.parameter_units;
+                                
+                                // 處理單位轉換
+                                let displayValue = originalValue;
+                                let displayUnit = item.sensor.parameter_units;
+                                
+                                if (paramName === 'no2') {
+                                  displayValue = convertNO2ToPPB(originalValue, item.sensor.parameter_units);
+                                  displayUnit = 'ppb';
+                                } else if (paramName === 'o3') {
+                                  displayValue = convertO3ToPPM(originalValue, item.sensor.parameter_units);
+                                  displayUnit = 'ppm';
+                                } else if (paramName === 'so2') {
+                                  displayValue = convertSO2ToPPB(originalValue, item.sensor.parameter_units);
+                                  displayUnit = 'ppb';
+                                }
                                 
                                 // 完全保留數值精度的格式化函數
                                 const formatValue = (value) => {
@@ -1073,13 +1062,13 @@ export default function InfoPanel({
                                 return (
                                   <>
                                     <Typography variant="h6" fontWeight="600">
-                                      {formatValue(displayValue)} {displayUnit}
+                                      {formatPollutantValue(displayValue, paramName)} {displayUnit}
                                     </Typography>
                                     
-                                    {/* 對於 NO2 顯示原始值和轉換說明 */}
-                                    {isNO2 && originalValue !== displayValue && (
+                                    {/* 對於 NO2、O3、SO2 顯示原始值和轉換說明 */}
+                                    {['no2', 'o3', 'so2'].includes(paramName) && originalValue !== displayValue && (
                                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                        Original: {formatValue(originalValue)} {item.sensor.parameter_units} → {formatValue(displayValue)} ppb
+                                        Original: {formatPollutantValue(originalValue, paramName)} {item.sensor.parameter_units} → {formatPollutantValue(displayValue, paramName)} {displayUnit}
                                       </Typography>
                                     )}
                                     
@@ -1092,10 +1081,10 @@ export default function InfoPanel({
                                     
                                     {item.data.summary && (
                                       <Typography variant="caption" display="block" color="text.secondary">
-                                        Avg: {formatValue(item.data.summary.avg)} |
-                                        Min: {formatValue(item.data.summary.min)} |
-                                        Max: {formatValue(item.data.summary.max)}
-                                        {isNO2 ? ` ${item.sensor.parameter_units}` : ''}
+                                        Avg: {formatPollutantValue(item.data.summary.avg, paramName)} |
+                                        Min: {formatPollutantValue(item.data.summary.min, paramName)} |
+                                        Max: {formatPollutantValue(item.data.summary.max, paramName)}
+                                        {['no2', 'o3', 'so2'].includes(paramName) ? ` ${item.sensor.parameter_units}` : ''}
                                       </Typography>
                                     )}
                                   </>
@@ -1212,7 +1201,7 @@ export default function InfoPanel({
                               </Box>
 
                               <Typography variant="h6" fontWeight="600">
-                                {pollutantInfo.max !== null ? formatValue(pollutantInfo.max) : '—'} {pollutantInfo.unit || 'μg/m³'}
+                                {pollutantInfo.max !== null ? formatPollutantValue(pollutantInfo.max, pollutant) : '—'} {pollutantInfo.unit || 'μg/m³'}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
                                 {pollutantInfo.max !== null 
@@ -1276,6 +1265,81 @@ export default function InfoPanel({
             </Box>
           </Box>
         )}
+
+        {/* 圖層控制 - 始終顯示在最下方 */}
+        <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="subtitle2" fontWeight="600" sx={{ mb: 1, fontSize: '0.9rem' }}>
+            Map Layers
+          </Typography>
+          
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={showTempoLayer}
+                  onChange={(event) => onToggleTempoLayer(event.target.checked)}
+                  size="small"
+                  color="primary"
+                />
+              }
+              label={
+                <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                  TEMPO NO₂
+                </Typography>
+              }
+              sx={{ 
+                margin: 0,
+                '& .MuiFormControlLabel-label': {
+                  ml: 0.5
+                }
+              }}
+            />
+            
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={showOpenAQLayer}
+                  onChange={(event) => onToggleOpenAQLayer(event.target.checked)}
+                  size="small"
+                  color="primary"
+                />
+              }
+              label={
+                <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                  OpenAQ
+                </Typography>
+              }
+              sx={{ 
+                margin: 0,
+                '& .MuiFormControlLabel-label': {
+                  ml: 0.5
+                }
+              }}
+            />
+            
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={showPandoraLayer}
+                  onChange={(event) => onTogglePandoraLayer(event.target.checked)}
+                  size="small"
+                  color="primary"
+                />
+              }
+              label={
+                <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                  Pandora
+                </Typography>
+              }
+              sx={{ 
+                margin: 0,
+                '& .MuiFormControlLabel-label': {
+                  ml: 0.5
+                }
+              }}
+            />
+          </Box>
+        </Box>
       </Box>
     </Paper>
   );
