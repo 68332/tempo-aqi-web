@@ -13,7 +13,12 @@ export default defineConfig({
         headers: {
           'User-Agent': 'tempo-aqi-web/1.0.0'
         }
-      }
+      }, 
+      '/api/pandora': {
+        target: 'https://data.hetzner.pandonia-global-network.org/',
+        changeOrigin: true,
+        rewrite: p => p.replace(/^\/api\/pandora/, ''),
+      },
     }
   }
 })

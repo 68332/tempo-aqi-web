@@ -6,7 +6,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // US border geo json from: https://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_040_00_500k.json
 // exclude: Alaska, Hawaii, Puerto Rico
 
-export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpenAQLayer, showPandoraLayer, showTOLNetLayer }) {
+export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpenAQLayer, showPandoraLayer }) {
   // 管理標記狀態和地圖引用
   const [clickMarker, setClickMarker] = React.useState(null);
   const mapRef = React.useRef(null);
@@ -174,17 +174,29 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
   const findNearbyStationsData = async (clickLat, clickLng, radiusKm = 10) => {
     try {
       // 獲取所有 OpenAQ 監測站的 GeoJSON 數據
-      const response = await fetch('/data/openaq-us-stations.geojson');
-      const geojsonData = await response.json();
+      const openaqResponse = await fetch('/data/openaq-us-stations.geojson');
+      const openaqData = await openaqResponse.json();
 
-      // 找出範圍內的監測站
-      const nearbyStations = geojsonData.features.filter(feature => {
+      // 獲取所有 Pandora 監測站的 GeoJSON 數據
+      const pandoraResponse = await fetch('/data/pandora-us-stations.geojson');
+      const pandoraData = await pandoraResponse.json();
+
+      // 找出範圍內的 OpenAQ 監測站
+      const nearbyOpenAQStations = openaqData.features.filter(feature => {
         const [stationLng, stationLat] = feature.geometry.coordinates;
         const distance = calculateDistance(clickLat, clickLng, stationLat, stationLng);
         return distance <= radiusKm;
       });
 
-      console.log(`Found ${nearbyStations.length} stations within ${radiusKm}km`);
+      // 找出範圍內的 Pandora 監測站
+      const nearbyPandoraStations = pandoraData.features.filter(feature => {
+        const [stationLng, stationLat] = feature.geometry.coordinates;
+        const distance = calculateDistance(clickLat, clickLng, stationLat, stationLng);
+        return distance <= radiusKm;
+      });
+
+      console.log(`Found ${nearbyOpenAQStations.length} OpenAQ stations within ${radiusKm}km`);
+      console.log(`Found ${nearbyPandoraStations.length} Pandora stations within ${radiusKm}km`);
 
       // 目標污染物
       const targetParameters = ['pm25', 'pm10', 'o3', 'co', 'so2', 'no2'];
@@ -203,8 +215,8 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
             // OpenAQ API key
       const API_KEY = 'f842213920405091f23318ca1a7880636ac843b7cb81f8e3985c41b17deb19f2';
 
-      // 收集所有監測站的 sensor 資料並獲取即時數據
-      for (const station of nearbyStations) {
+      // 收集所有 OpenAQ 監測站的 sensor 資料並獲取即時數據
+      for (const station of nearbyOpenAQStations) {
         let sensors = station.properties.sensors || [];
         
         // 確保 sensors 是陣列
@@ -258,6 +270,92 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
         }
       }
 
+      // 處理 Pandora 監測站數據
+      // Pandora 主要測量大氣柱 NO2 和 O3
+      for (const pandoraStation of nearbyPandoraStations) {
+        const stationName = pandoraStation.properties.station;
+        const instrument = pandoraStation.properties.instrument;
+        
+        console.log(`Processing Pandora station: ${stationName} (${instrument})`);
+        
+        try {
+          // 使用真實的 Pandora API
+          const response = await fetch(`/api/pandora/${stationName}/${instrument}/L2/${instrument}_${stationName}_L2_rnvh3p1-8.txt`);
+          
+          if (response.ok) {
+            const text = await response.text();
+            const lines = text.trim().split('\n');
+            const tail = lines.slice(-5);
+
+            let lastDataLine = null;
+            for (let i = tail.length - 1; i >= 0; i--) {
+              const line = tail[i].trim();
+              if (/^\d{8}T\d{6}/.test(line)) { // 符合時間戳格式 20250920T233650
+                lastDataLine = line;
+                break;
+              }
+            }
+
+            if (lastDataLine) {
+              const cols = lastDataLine.split(/\s+/);
+              const timestamp = cols[0];
+              const no2_value = cols[56]; // NO2 柱濃度
+              const isoTimestamp = `${timestamp.slice(0, 4)}-${timestamp.slice(4, 6)}-${timestamp.slice(6, 8)}T${timestamp.slice(9, 11)}:${timestamp.slice(11, 13)}:${timestamp.slice(13, 15)}Z`;
+
+              if (no2_value && no2_value !== 'null' && !isNaN(Number(no2_value))) {
+                const no2_column = Number(no2_value); // 單位: mol/m³ 或其他
+                
+                // 將 Pandora NO2 柱濃度轉換為地表濃度 (ppb) 用於 AQI 計算
+                // 注意：Pandora 的單位可能與 TEMPO 不同，需要適當轉換
+                
+                // 假設 Pandora 的 NO2 數據單位是 mol/m³，需要轉換為 molecules/cm²
+                // 這個轉換需要根據實際的 Pandora 數據格式來調整
+                const no2_molecules_cm2 = no2_column * 6.022e23 * 1e-4; // 簡化轉換
+                
+                if (no2_molecules_cm2 > 0) {
+                  // 使用與 TEMPO 相同的轉換邏輯
+                  const AVOGADRO = 6.022e23;
+                  const PRESSURE_SURFACE = 1013.25;
+                  const TEMPERATURE_SURFACE = 288.15;
+                  const MIXING_HEIGHT = 1.5e5;
+                  const SHAPE_FACTOR = 0.7;
+                  
+                  const volumeDensity = (no2_molecules_cm2 * SHAPE_FACTOR) / MIXING_HEIGHT;
+                  const airDensity = (PRESSURE_SURFACE * 100) / (1.38e-16 * TEMPERATURE_SURFACE);
+                  const no2_ppb = (volumeDensity / airDensity) * 1e9;
+                  
+                  if (no2_ppb > 0) {
+                    pollutantData.no2.values.push(no2_ppb);
+                    pollutantData.no2.stations.push({
+                      stationName: stationName,
+                      stationId: `pandora_${stationName}`,
+                      unit: 'ppb',
+                      value: no2_ppb,
+                      originalValue: no2_column,
+                      originalUnit: 'mol/m³',
+                      timestamp: isoTimestamp,
+                      source: 'pandora'
+                    });
+                    
+                    if (!pollutantData.no2.unit) {
+                      pollutantData.no2.unit = 'ppb';
+                    }
+                    
+                    console.log(`Pandora ${stationName} NO2: ${no2_column} mol/m³ → ${no2_ppb.toFixed(2)} ppb`);
+                  }
+                }
+              }
+            } else {
+              console.log(`No recent data found for Pandora station ${stationName}`);
+            }
+          } else {
+            console.error(`Failed to fetch Pandora data for ${stationName}:`, response.status);
+          }
+        } catch (error) {
+          console.error(`Error fetching Pandora data for ${stationName}:`, error);
+        }
+      }
+
       // 計算每種污染物的最大值
       targetParameters.forEach(param => {
         if (pollutantData[param].values.length > 0) {
@@ -266,7 +364,9 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
       });
 
       return {
-        nearbyStationsCount: nearbyStations.length,
+        nearbyStationsCount: nearbyOpenAQStations.length + nearbyPandoraStations.length,
+        openaqStationsCount: nearbyOpenAQStations.length,
+        pandoraStationsCount: nearbyPandoraStations.length,
         pollutantData,
         radiusKm
       };
@@ -415,29 +515,26 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
       }
       return;
     }
-    
+
     // 檢查是否點擊到 Pandora 監測站
-    const pandoraFeature = features.find(f => f.layer.id === 'pandora-stations-points');
+    const pandoraFeature = features.find(f => f.layer.id === 'pandora-us-stations-points');
     if (pandoraFeature) {
+      console.log(pandoraFeature);
       const { lng, lat } = event.lngLat;
-      const stationName = pandoraFeature.properties.station;
-      const instrument = pandoraFeature.properties.instrument;
-      const provider = 'Pandora';
-      
-      console.log('Pandora station clicked:', stationName, 'Instrument:', instrument); // Debug 用
-      
+      const stationName = pandoraFeature.properties.station || 'Unknown Station';
+      const instrument = pandoraFeature.properties.instrument || 'Unknown Instrument';
+
+      console.log('lng, lat:', lng, lat);
+      console.log('Pandora Station clicked:', stationName, 'Instrument:', instrument);
+
       if (onSelect) {
-        onSelect({ 
-          lng, 
-          lat, 
-          stateName: 'Pandora Station',
+        onSelect({
+          lng,
+          lat,
           stationName,
-          provider,
-          instrument, // 傳遞 instrument 資訊
-          timezone: null, // Pandora 資料沒有 timezone
-          sensors: [], // Pandora 站點沒有即時 sensors 資料
+          instrument,
           isStation: true,
-          stationType: 'Pandora'
+          type: 'pandora'
         });
       }
       return;
@@ -607,32 +704,6 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
                 15, 12
               ],
               "circle-color": "#0b204fff",
-              "circle-stroke-color": "#FFFFFF",
-              "circle-stroke-width": 1,
-              "circle-opacity": 0.8
-            }}
-          />
-        </>
-      )}
-
-      {/* TOLNet 監測站 - 條件顯示 */}
-      {showTOLNetLayer && (
-        <>
-          <Source id="TOLNet-us-stations" type="geojson" data="/data/TOLnet-us-stations.geojson" />
-          <Layer
-            id="TOLNet-us-stations-points"
-            type="circle"
-            source="TOLNet-us-stations"
-            paint={{
-              "circle-radius": [
-                "interpolate",
-                ["linear"],
-                ["zoom"],
-                3, 3,
-                8, 6,
-                15, 12
-              ],
-              "circle-color": "#a8d36cff",
               "circle-stroke-color": "#FFFFFF",
               "circle-stroke-width": 1,
               "circle-opacity": 0.8

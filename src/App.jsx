@@ -12,7 +12,6 @@ export default function App() {
   const [showTempoLayer, setShowTempoLayer] = React.useState(true); // 控制 TEMPO NO2 圖層顯示
   const [showOpenAQLayer, setShowOpenAQLayer] = React.useState(true); // 控制 OpenAQ 監測站顯示
   const [showPandoraLayer, setShowPandoraLayer] = React.useState(true); // 控制 Pandora 監測站顯示
-  const [showTOLNetLayer, setShowTOLNetLayer] = React.useState(true); // 控制 TOLNet 監測站顯示
   
   // selection: { lng, lat, stateName } | null
 
@@ -42,7 +41,6 @@ export default function App() {
         showTempoLayer={showTempoLayer}
         showOpenAQLayer={showOpenAQLayer}
         showPandoraLayer={showPandoraLayer}
-        showTOLNetLayer={showTOLNetLayer}
       />
 
       {/* 右側資訊面板（浮在地圖上） */}
@@ -56,8 +54,6 @@ export default function App() {
         onToggleOpenAQLayer={setShowOpenAQLayer}
         showPandoraLayer={showPandoraLayer}
         onTogglePandoraLayer={setShowPandoraLayer}
-        showTOLNetLayer={showTOLNetLayer}
-        onToggleTOLNetLayer={setShowTOLNetLayer}
       />
 
       {/* Footer */}
@@ -132,19 +128,6 @@ export default function App() {
             }}
           />
           <span>Pandora Stations</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div
-            style={{
-              width: '12px',
-              height: '12px',
-              borderRadius: '50%',
-              backgroundColor: '#a8d36cff',
-              border: '1px solid #FFFFFF',
-              flexShrink: 0
-            }}
-          />
-          <span>TOLnet Stations</span>
         </div>
         <div style={{ 
           display: 'flex', 

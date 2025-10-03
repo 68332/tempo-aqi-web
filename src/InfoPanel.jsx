@@ -23,9 +23,7 @@ export default function InfoPanel({
   showOpenAQLayer, 
   onToggleOpenAQLayer, 
   showPandoraLayer, 
-  onTogglePandoraLayer, 
-  showTOLNetLayer, 
-  onToggleTOLNetLayer 
+  onTogglePandoraLayer 
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -219,13 +217,19 @@ export default function InfoPanel({
 
   // 當 data 改變且有 sensors 時，獲取 sensor 資料
   React.useEffect(() => {
-    // 只有 OpenAQ 監測站才獲取 sensor 資料
-    if (data && data.stationType === 'OpenAQ' && data.sensors && data.sensors.length > 0) {
-      console.log('Fetching data for sensors:', data.sensors); // Debug
-      fetchSensorData(data.sensors);
-    } else {
-      console.log('sensorData changed:', []); // Debug 用
-      setSensorData([]);
+    if (data) {
+      // if data is from openaq
+      if (data.type === 'openaq') {
+        if (data && data.sensors && data.sensors.length > 0) {
+          console.log('Fetching data for sensors:', data.sensors); // Debug
+          fetchSensorData(data.sensors);
+        } else {
+          setSensorData([]);
+        }
+        // if data is from pandora
+      } else if (data.type === 'pandora') {
+        fetchPandoraData(data);
+      }
     }
   }, [data]);
 
@@ -478,6 +482,67 @@ export default function InfoPanel({
     }
   };
 
+  // Fetch Pandora data
+  const fetchPandoraData = async (data) => {
+    setLoading(true);
+    try {
+      // use proxy to avoid CORS issue
+      const response = await fetch(`/api/pandora/${data.stationName}/${data.instrument}/L2/${data.instrument}_${data.stationName}_L2_rnvh3p1-8.txt`);
+      if (response.ok) {
+        const text = await response.text();
+        const lines = text.trim().split('\n');
+        const tail = lines.slice(-5);
+
+        let lastDataLine = null;
+        for (let i = tail.length - 1; i >= 0; i--) {
+          const line = tail[i].trim();
+          if (/^\d{8}T\d{6}/.test(line)) { // 符合時間戳格式 20250920T233650
+            lastDataLine = line;
+            break;
+          }
+        }
+
+        if (lastDataLine) {
+          const cols = lastDataLine.split(/\s+/);
+          const timestamp = cols[0];
+          const value = cols[56];
+          const isoTimestamp = `${timestamp.slice(0, 4)}-${timestamp.slice(4, 6)}-${timestamp.slice(6, 8)}T${timestamp.slice(9, 11)}:${timestamp.slice(11, 13)}:${timestamp.slice(13, 15)}Z`;
+
+          setSensorData([{
+            sensor: {
+              parameter_display_name: 'NO₂',
+              parameter_name: 'no2',
+              parameter_units: 'mol/m3' // 若知道正確單位請替換
+            },
+            data: {
+              latest: {
+                value: value != null ? Number(value) : null,
+                datetime: { local: isoTimestamp }
+              },
+              summary: null,
+            },
+            error: null
+          }]);
+        } else {
+          setSensorData([]);
+          setLoading(false);
+        }
+        return
+      } else {
+        setSensorData([]);
+        setLoading(false);
+        return
+      }
+    } catch (error) {
+      console.error('Error fetching sensor data:', error);
+      setSensorData([]);
+      setLoading(false);
+      return
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Debug: 監聽 sensorData 變化
   React.useEffect(() => {
     console.log('sensorData changed:', sensorData);
@@ -600,9 +665,6 @@ export default function InfoPanel({
               <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                 • <strong>Pandora</strong> - Atmospheric composition measurement stations
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                • <strong>TOLNet</strong> - Tropospheric Ozone Lidar Network
-              </Typography>
             </Box>
             
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -696,34 +758,6 @@ export default function InfoPanel({
                 sx={{ 
                   alignItems: 'flex-start',
                   mb: 1,
-                  '& .MuiFormControlLabel-label': {
-                    ml: 1
-                  }
-                }}
-              />
-
-              {/* TOLNet 監測站 */}
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showTOLNetLayer}
-                    onChange={(event) => onToggleTOLNetLayer(event.target.checked)}
-                    size="small"
-                    color="primary"
-                  />
-                }
-                label={
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      TOLNet Stations
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Tropospheric Ozone Lidar Network
-                    </Typography>
-                  </Box>
-                }
-                sx={{ 
-                  alignItems: 'flex-start',
                   '& .MuiFormControlLabel-label': {
                     ml: 1
                   }
@@ -846,28 +880,6 @@ export default function InfoPanel({
                   label={
                     <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                       Pandora
-                    </Typography>
-                  }
-                  sx={{ 
-                    margin: 0,
-                    '& .MuiFormControlLabel-label': {
-                      ml: 0.5
-                    }
-                  }}
-                />
-                
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={showTOLNetLayer}
-                      onChange={(event) => onToggleTOLNetLayer(event.target.checked)}
-                      size="small"
-                      color="primary"
-                    />
-                  }
-                  label={
-                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                      TOLNet
                     </Typography>
                   }
                   sx={{ 
@@ -1138,9 +1150,18 @@ export default function InfoPanel({
                     </Box>
                   ) : data.nearbyStationsData && data.nearbyStationsData.nearbyStationsCount > 0 ? (
                     <Box>
-                      <Typography variant="body2" color="success.main" sx={{ mb: 2 }}>
+                      <Typography variant="body2" color="success.main" sx={{ mb: 1 }}>
                         Found {data.nearbyStationsData.nearbyStationsCount} monitoring stations within 10km
                       </Typography>
+                      
+                      {/* 顯示監測站類型分布 */}
+                      {(data.nearbyStationsData.openaqStationsCount > 0 || data.nearbyStationsData.pandoraStationsCount > 0) && (
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+                          {data.nearbyStationsData.openaqStationsCount > 0 && `${data.nearbyStationsData.openaqStationsCount} OpenAQ stations`}
+                          {data.nearbyStationsData.openaqStationsCount > 0 && data.nearbyStationsData.pandoraStationsCount > 0 && ' • '}
+                          {data.nearbyStationsData.pandoraStationsCount > 0 && `${data.nearbyStationsData.pandoraStationsCount} Pandora stations`}
+                        </Typography>
+                      )}
 
                       {/* 顯示指定污染物的最大值 */}
                       {Object.entries(data.nearbyStationsData.pollutantData)
@@ -1199,6 +1220,23 @@ export default function InfoPanel({
                                   : 'No recent data available'
                                 }
                               </Typography>
+                              
+                              {/* 顯示數據來源分布 */}
+                              {pollutantInfo.stations && pollutantInfo.stations.length > 0 && (
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                  Sources: {(() => {
+                                    const sources = pollutantInfo.stations.reduce((acc, station) => {
+                                      const source = station.source || 'openaq';
+                                      acc[source] = (acc[source] || 0) + 1;
+                                      return acc;
+                                    }, {});
+                                    
+                                    return Object.entries(sources)
+                                      .map(([source, count]) => `${count} ${source.toUpperCase()}`)
+                                      .join(', ');
+                                  })()}
+                                </Typography>
+                              )}
                             </Paper>
                           );
                         })}
