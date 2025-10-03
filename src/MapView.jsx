@@ -6,17 +6,27 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // US border geo json from: https://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_040_00_500k.json
 // exclude: Alaska, Hawaii, Puerto Rico
 
-export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpenAQLayer, showPandoraLayer }) {
+export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpenAQLayer, showPandoraLayer, currentZoom, onZoomChange, mapRef }) {
   // 管理標記狀態和地圖引用
   const [clickMarker, setClickMarker] = React.useState(null);
-  const mapRef = React.useRef(null);
+  const internalMapRef = React.useRef(null);
+
+  // 使用外部傳入的 mapRef 或內部的 ref
+  const actualMapRef = mapRef || internalMapRef;
 
   // 添加地圖載入事件監聽器
   const handleMapLoad = () => {
     console.log('🗺️ Map loaded successfully');
     
-    if (mapRef.current) {
-      const map = mapRef.current;
+    if (actualMapRef.current) {
+      const map = actualMapRef.current;
+      
+      // 監聽地圖縮放變化
+      map.on('zoom', () => {
+        if (onZoomChange) {
+          onZoomChange(map.getZoom());
+        }
+      });
       
       // 監聽 TEMPO NO₂ 圖層的載入事件
       map.on('sourcedata', (e) => {
@@ -502,11 +512,11 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
 
   // 重置到首頁視角的函數
   React.useEffect(() => {
-    if (resetToHome && mapRef.current) {
+    if (resetToHome && actualMapRef.current) {
       // 清除點擊標記和圓圈
       setClickMarker(null);
       // 平滑飛行回到初始視角
-      mapRef.current.flyTo({
+      actualMapRef.current.flyTo({
         center: [initialViewState.longitude, initialViewState.latitude],
         zoom: initialViewState.zoom,
         duration: 2000, // 2秒動畫
@@ -588,8 +598,8 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
     setClickMarker({ lng, lat });
 
     // 不論點擊到什麼地方都要放大（僅限美國境內）
-    if (mapRef.current) {
-      mapRef.current.flyTo({
+    if (actualMapRef.current) {
+      actualMapRef.current.flyTo({
         center: [lng, lat],
         zoom: 9,
         duration: 2000, // 2秒動畫
@@ -702,7 +712,7 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
 
   return (
     <Map
-      ref={mapRef}
+      ref={actualMapRef}
       initialViewState={initialViewState}
       style={{ width: "100vw", height: "100vh" }}
       mapStyle="https://tiles.openfreemap.org/styles/liberty"

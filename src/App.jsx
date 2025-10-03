@@ -7,12 +7,52 @@ export default function App() {
   const [selection, setSelection] = React.useState(null);
   const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 900);
   const [resetToHome, setResetToHome] = React.useState(false);
+  const [currentZoom, setCurrentZoom] = React.useState(3.6);
+  const mapRef = React.useRef(null);
   
   // 圖層顯示控制狀態
   const [showTempoLayer, setShowTempoLayer] = React.useState(true); // 控制 TEMPO NO2 圖層顯示
   const [showOpenAQLayer, setShowOpenAQLayer] = React.useState(true); // 控制 OpenAQ 監測站顯示
   const [showPandoraLayer, setShowPandoraLayer] = React.useState(true); // 控制 Pandora 監測站顯示
   
+  // 縮放控制函數
+  const handleZoomChange = (newZoom) => {
+    setCurrentZoom(newZoom);
+    if (mapRef.current) {
+      mapRef.current.setZoom(newZoom);
+    }
+  };
+
+  const handleZoomIn = () => {
+    const newZoom = Math.min(15, currentZoom + 0.5);
+    setCurrentZoom(newZoom);
+    if (mapRef.current) {
+      // 按鈕操作使用緩衝動畫
+      mapRef.current.easeTo({
+        zoom: newZoom,
+        duration: 300
+      });
+    }
+  };
+
+  const handleZoomOut = () => {
+    const newZoom = Math.max(3, currentZoom - 0.5);
+    setCurrentZoom(newZoom);
+    if (mapRef.current) {
+      // 按鈕操作使用緩衝動畫
+      mapRef.current.easeTo({
+        zoom: newZoom,
+        duration: 300
+      });
+    }
+  };
+
+  const handleSliderChange = (event) => {
+    const newZoom = parseFloat(event.target.value);
+    // 拉條操作立即響應，無緩衝
+    handleZoomChange(newZoom);
+  };
+
   // selection: { lng, lat, stateName } | null
 
   React.useEffect(() => {
@@ -34,6 +74,61 @@ export default function App() {
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+      {/* Custom CSS for slider */}
+      <style>{`
+        input[type="range"] {
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-track {
+          width: 100%;
+          height: 4px;
+          background: #e2e8f0;
+          border-radius: 2px;
+          border: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 6px;
+          height: 16px;
+          background: #6b7280;
+          border-radius: 3px;
+          cursor: pointer;
+          border: none;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+          background: #4b5563;
+        }
+        
+        input[type="range"]::-moz-range-track {
+          width: 100%;
+          height: 4px;
+          background: #e2e8f0;
+          border-radius: 2px;
+          border: none;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+          width: 6px;
+          height: 16px;
+          background: #6b7280;
+          border-radius: 3px;
+          cursor: pointer;
+          border: none;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+          -moz-appearance: none;
+        }
+        
+        input[type="range"]::-moz-range-thumb:hover {
+          background: #4b5563;
+        }
+      `}</style>
       {/* 地圖：把點擊結果丟回來 */}
       <MapView 
         onSelect={setSelection} 
@@ -41,6 +136,9 @@ export default function App() {
         showTempoLayer={showTempoLayer}
         showOpenAQLayer={showOpenAQLayer}
         showPandoraLayer={showPandoraLayer}
+        currentZoom={currentZoom}
+        onZoomChange={setCurrentZoom}
+        mapRef={mapRef}
       />
 
       {/* 右側資訊面板（浮在地圖上） */}
@@ -77,6 +175,137 @@ export default function App() {
         }}
       >
         AirCast | 68332@Taichung NASA Hackathon 2025
+      </div>
+
+      {/* Zoom Slider */}
+      <div
+        style={{
+          position: 'absolute',
+          ...(isMobile ? {
+            // 手機版：右上角，緊貼 legend 下面
+            top: '95px',
+            right: '12px'
+          } : {
+            // 桌面版：右下角，緊貼 legend 上面
+            bottom: '120px',
+            right: '10px'
+          }),
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(8px)',
+          borderRadius: '10px', // 與 legend 相同的圓角
+          padding: '3px 18px', // 與 legend 相同的內邊距
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          zIndex: 5,
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: '6px',
+          width: isMobile ? '170px' : '170px' // 縮短整體長度
+        }}
+      >
+        {/* Zoom Out Button */}
+        <button
+          onClick={handleZoomOut}
+          disabled={currentZoom <= 3}
+          style={{
+            width: '20px',
+            height: '20px',
+            border: 'none',
+            backgroundColor: 'transparent',
+            borderRadius: '4px',
+            cursor: currentZoom <= 3 ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            color: currentZoom <= 3 ? '#9ca3af' : '#4a5568',
+            transition: 'all 0.15s ease',
+            flexShrink: 0
+          }}
+          onMouseEnter={(e) => {
+            if (currentZoom > 3) {
+              e.target.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (currentZoom > 3) {
+              e.target.style.backgroundColor = 'transparent';
+            }
+          }}
+        >
+          −
+        </button>
+
+        {/* Divider */}
+        <div style={{
+          width: '1px',
+          height: '12px',
+          backgroundColor: '#e2e8f0'
+        }} />
+
+        {/* Slider */}
+        <input
+          type="range"
+          min={3}
+          max={15}
+          step={0.1}
+          value={currentZoom}
+          onChange={handleSliderChange}
+          style={{
+            width: '80px', // 固定較短的滑動條寬度
+            height: '4px',
+            background: '#e2e8f0',
+            borderRadius: '2px',
+            outline: 'none',
+            cursor: 'pointer',
+            WebkitAppearance: 'none',
+            MozAppearance: 'none',
+            appearance: 'none'
+          }}
+        />
+
+        {/* Divider */}
+        <div style={{
+          width: '1px',
+          height: '12px',
+          backgroundColor: '#e2e8f0'
+        }} />
+
+        {/* Zoom In Button */}
+        <button
+          onClick={handleZoomIn}
+          disabled={currentZoom >= 15}
+          style={{
+            width: '20px',
+            height: '20px',
+            border: 'none',
+            backgroundColor: 'transparent',
+            borderRadius: '4px',
+            cursor: currentZoom >= 15 ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            color: currentZoom >= 15 ? '#9ca3af' : '#4a5568',
+            transition: 'all 0.15s ease',
+            flexShrink: 0
+          }}
+          onMouseEnter={(e) => {
+            if (currentZoom < 15) {
+              e.target.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (currentZoom < 15) {
+              e.target.style.backgroundColor = 'transparent';
+            }
+          }}
+        >
+          +
+        </button>
       </div>
 
       {/* Legend */}
