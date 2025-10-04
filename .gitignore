@@ -47,9 +47,7 @@ __pycache__/
 .env.local
 
 # TEMPO data directories
-public/data/
 
 # Tiles and processed data
-tiles/
 geotiff/
 no2/
