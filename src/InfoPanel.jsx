@@ -81,6 +81,16 @@ export default function InfoPanel({
     setTitleKey(prev => prev + 1);
   }, [!!data]);
 
+  // 當位置發生變化或開始載入新數據時立即重置 AQI 數據，避免顯示上一個位置的 AQI
+  React.useEffect(() => {
+    if (data) {
+      console.log('Position changed or loading new data, resetting AQI and sensor data');
+      setAqiData(null);
+      setSensorData([]); // 也重置 sensor 數據
+      setLoading(false); // 重置載入狀態
+    }
+  }, [data?.lng, data?.lat, data?.loadingNearbyData, data?.loadingTempoData]);
+
   // 將 TEMPO NO2 柱濃度轉換為地表濃度 (ppb)
   const convertTEMPOColumnToPPB = (columnDensity) => {
     // columnDensity: molecules/cm²
@@ -541,8 +551,14 @@ export default function InfoPanel({
 
       const promises = limitedSensors.map(async (sensor) => {
         try {
-          // 使用代理路徑來避免 CORS 問題
-          const response = await fetch(`/api/openaq/v3/sensors/${sensor.id}`, {
+          // 檢查是否在開發環境（有 proxy）還是生產環境
+          const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+          const apiUrl = isDevelopment 
+            ? `/api/openaq/v3/sensors/${sensor.id}` // 開發環境使用 proxy
+            : `https://cors-anywhere.herokuapp.com/https://api.openaq.org/v3/sensors/${sensor.id}`; // 生產環境使用 CORS Anywhere
+          
+          // 使用動態 URL 來避免 CORS 問題
+          const response = await fetch(apiUrl, {
             headers: {
               'x-api-key': API_KEY  // 改用小寫的 header 名稱
             }
@@ -605,8 +621,14 @@ export default function InfoPanel({
   const fetchPandoraData = async (data) => {
     setLoading(true);
     try {
+      // 檢查是否在開發環境（有 proxy）還是生產環境
+      const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const pandoraApiUrl = isDevelopment 
+        ? `/api/pandora/${data.stationName}/${data.instrument}/L2/${data.instrument}_${data.stationName}_L2_rnvh3p1-8.txt` // 開發環境使用 proxy
+        : `https://cors-anywhere.herokuapp.com/https://data.hetzner.pandonia-global-network.org/${data.stationName}/${data.instrument}/L2/${data.instrument}_${data.stationName}_L2_rnvh3p1-8.txt`; // 生產環境使用 CORS Anywhere
+      
       // use proxy to avoid CORS issue
-      const response = await fetch(`/api/pandora/${data.stationName}/${data.instrument}/L2/${data.instrument}_${data.stationName}_L2_rnvh3p1-8.txt`);
+      const response = await fetch(pandoraApiUrl);
       if (response.ok) {
         const text = await response.text();
         const lines = text.trim().split('\n');

@@ -687,7 +687,8 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
           timezone,
           sensors, // 傳遞 sensors 資料
           isStation: true,
-          stationType: 'OpenAQ'
+          stationType: 'OpenAQ',
+          type: 'openaq' // 添加 type 屬性供 InfoPanel 使用
         });
       }
       return;
