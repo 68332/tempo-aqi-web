@@ -449,13 +449,14 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
         console.log(`Processing Pandora station: ${stationName} (${instrument})`);
         
         try {
-          // 暫時跳過 Pandora API 調用，避免在 GitHub Pages 上出現 404 錯誤
-          console.log(`Pandora station ${stationName} found, but API integration is disabled for GitHub Pages deployment.`);
-          continue;
-          
-          /*
-          // 原本的 Pandora API 調用（暫時禁用）
-          const response = await fetch(`/api/pandora/${stationName}/${instrument}/L2/${instrument}_${stationName}_L2_rnvh3p1-8.txt`);
+          // 檢查是否在開發環境（有 proxy）還是生產環境
+          const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+          const pandoraApiUrl = isDevelopment 
+            ? `/api/pandora/${stationName}/${instrument}/L2/${instrument}_${stationName}_L2_rnvh3p1-8.txt` // 開發環境使用 proxy
+            : `https://cors-anywhere.herokuapp.com/https://data.hetzner.pandonia-global-network.org/${stationName}/${instrument}/L2/${instrument}_${stationName}_L2_rnvh3p1-8.txt`; // 生產環境使用 CORS Anywhere
+
+          console.log(`Fetching Pandora data from: ${pandoraApiUrl}`);
+          const response = await fetch(pandoraApiUrl);
           
           if (response.ok) {
             const text = await response.text();
@@ -526,7 +527,7 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
           } else {
             console.error(`Failed to fetch Pandora data for ${stationName}:`, response.status);
           }
-          */
+          
         } catch (error) {
           console.error(`Error fetching Pandora data for ${stationName}:`, error);
         }
