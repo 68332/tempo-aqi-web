@@ -287,11 +287,11 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
   const findNearbyStationsData = async (clickLat, clickLng, radiusKm = 10) => {
     try {
       // 獲取所有 OpenAQ 監測站的 GeoJSON 數據
-      const openaqResponse = await fetch('/data/openaq-us-stations.geojson');
+      const openaqResponse = await fetch(getAssetPath('/data/openaq-us-stations.geojson'));
       const openaqData = await openaqResponse.json();
 
       // 獲取所有 Pandora 監測站的 GeoJSON 數據
-      const pandoraResponse = await fetch('/data/pandora-us-stations.geojson');
+      const pandoraResponse = await fetch(getAssetPath('/data/pandora-us-stations.geojson'));
       const pandoraData = await pandoraResponse.json();
 
       // 找出範圍內的 OpenAQ 監測站
@@ -347,8 +347,13 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
           const paramName = sensor.parameter_name?.toLowerCase();
           if (targetParameters.includes(paramName)) {
             try {
-              // 調用 OpenAQ API 獲取即時數據
-              const response = await fetch(`/api/openaq/v3/sensors/${sensor.id}`, {
+              // 檢查是否在開發環境（有 proxy）還是生產環境
+              const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+              const apiUrl = isDevelopment 
+                ? `/api/openaq/v3/sensors/${sensor.id}` // 開發環境使用 proxy
+                : `https://cors-anywhere.herokuapp.com/https://api.openaq.org/v3/sensors/${sensor.id}`; // 生產環境使用 CORS Anywhere
+              
+              const response = await fetch(apiUrl, {
                 headers: {
                   'x-api-key': API_KEY
                 }
@@ -394,7 +399,42 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
                 console.error(`Failed to fetch data for sensor ${sensor.id}:`, response.status);
               }
             } catch (error) {
-              console.error(`Error fetching sensor ${sensor.id}:`, error);
+              console.error(`Error fetching sensor ${sensor.id} (likely CORS or network issue):`, error);
+              
+              // 如果直接 API 調用失敗，嘗試使用 sensor 中可能存在的歷史數據
+              if (sensor.latest_value !== null && sensor.latest_value !== undefined) {
+                console.log(`Using fallback data for sensor ${sensor.id}`);
+                
+                let convertedValue = sensor.latest_value;
+                let convertedUnit = sensor.parameter_units;
+                
+                if (paramName === 'o3') {
+                  convertedValue = convertO3ToPPM(sensor.latest_value, sensor.parameter_units);
+                  convertedUnit = 'ppm';
+                } else if (paramName === 'so2') {
+                  convertedValue = convertSO2ToPPB(sensor.latest_value, sensor.parameter_units);
+                  convertedUnit = 'ppb';
+                } else if (paramName === 'no2') {
+                  convertedValue = convertNO2ToPPB(sensor.latest_value, sensor.parameter_units);
+                  convertedUnit = 'ppb';
+                }
+                
+                pollutantData[paramName].values.push(convertedValue);
+                pollutantData[paramName].stations.push({
+                  stationName: station.properties.name,
+                  sensorId: sensor.id,
+                  unit: convertedUnit,
+                  value: convertedValue,
+                  originalValue: sensor.latest_value,
+                  originalUnit: sensor.parameter_units,
+                  timestamp: sensor.latest_datetime || 'Historical data',
+                  note: 'Fallback data - API unavailable'
+                });
+
+                if (!pollutantData[paramName].unit) {
+                  pollutantData[paramName].unit = convertedUnit;
+                }
+              }
             }
           }
         }
@@ -409,7 +449,12 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
         console.log(`Processing Pandora station: ${stationName} (${instrument})`);
         
         try {
-          // 使用真實的 Pandora API
+          // 暫時跳過 Pandora API 調用，避免在 GitHub Pages 上出現 404 錯誤
+          console.log(`Pandora station ${stationName} found, but API integration is disabled for GitHub Pages deployment.`);
+          continue;
+          
+          /*
+          // 原本的 Pandora API 調用（暫時禁用）
           const response = await fetch(`/api/pandora/${stationName}/${instrument}/L2/${instrument}_${stationName}_L2_rnvh3p1-8.txt`);
           
           if (response.ok) {
@@ -481,6 +526,7 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
           } else {
             console.error(`Failed to fetch Pandora data for ${stationName}:`, response.status);
           }
+          */
         } catch (error) {
           console.error(`Error fetching Pandora data for ${stationName}:`, error);
         }
