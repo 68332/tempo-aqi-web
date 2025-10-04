@@ -35,13 +35,11 @@ jobs:
           git rev-parse --abbrev-ref HEAD
           ls -la
           ls -la scripts || true
-
       # 2) 系統層的 GDAL
       - name: Install GDAL
         run: |
           sudo apt-get update
           sudo apt-get install -y gdal-bin libgdal-dev
-
       # 3) Python 3.11 + 套件
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -53,7 +51,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r scripts/requirements.txt
           python -c "import rasterio, sys; print('rasterio OK:', rasterio.__version__)"
-
       # 4) 執行抓取＋產生 tiles（輸出到 ${OUTPUT_DIR}）
       - name: Run fetch script
         env:
@@ -65,7 +62,6 @@ jobs:
           echo "---- List OUTPUT ----"
           ls -R "${OUTPUT_DIR}" || true
           pwd
-
       # 5) 第二次 checkout：把 gh-pages 取到子資料夾 gh-pages/
       - name: Checkout gh-pages
         uses: actions/checkout@v4
@@ -82,13 +78,12 @@ jobs:
           rsync -av ../public/tempo/tiles /home/runner/work/tempo-aqi-web/tempo-aqi-web/gh-pages/tempo/
           echo "---- List gh-pages/tempo ----"
           ls -R gh-pages/tempo || true
-
       # 7) 提交 & 推送 gh-pages
       - name: Commit & push to gh-pages
         working-directory: gh-pages
         run: |
           git config user.name "aircast-bot"
-          git config user.email "bot@users.noreply.github.com"
+          git config user.email "actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "chore: refresh TEMPO assets" || echo "No changes"
           git push origin gh-pages
