@@ -1,5 +1,6 @@
 {
   "name": "tempo-aqi-web",
+  "homepage": "https://68332.github.io/tempo-aqi-web/",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,7 +8,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -17,6 +20,7 @@
     "@turf/mask": "^7.2.0",
     "@turf/union": "^7.2.0",
     "@vis.gl/react-maplibre": "^8.0.4",
+    "gh-pages": "^6.3.0",
     "maplibre-gl": "^5.7.3",
     "netcdfjs": "^3.0.0",
     "react": "^19.1.1",
