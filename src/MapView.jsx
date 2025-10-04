@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { Map, Source, Layer } from '@vis.gl/react-maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { getAssetPath } from './lib/constants.js';
 
 // US border geo json from: https://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_040_00_500k.json
 // exclude: Alaska, Hawaii, Puerto Rico
@@ -151,7 +152,7 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
       const tileY = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, tileZ));
       
       // 構建 tile URL
-      const tileUrl = `${window.location.origin}/tempo/tiles/${tileZ}/${tileX}/${tileY}.png`;
+      const tileUrl = `${window.location.origin}${getAssetPath('/tempo/tiles')}/${tileZ}/${tileX}/${tileY}.png`;
       
       // 計算在 tile 內的像素位置
       const tileSize = 256;
@@ -527,14 +528,14 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
 
   // 檢查 TEMPO tiles URL 並記錄調試信息
   React.useEffect(() => {
-    const tilesUrl = `${window.location.origin}/tempo/tiles/{z}/{x}/{y}.png`;
+    const tilesUrl = `${window.location.origin}${getAssetPath('/tempo/tiles')}/{z}/{x}/{y}.png`;
     console.log('🔗 TEMPO tiles URL pattern:', tilesUrl);
     
     // 測試多個具體的 tile URL
     const testTileUrls = [
-      `${window.location.origin}/tempo/tiles/4/2/10.png`,
-      `${window.location.origin}/tempo/tiles/3/1/5.png`,
-      `${window.location.origin}/tempo/tiles/5/4/20.png`
+      `${window.location.origin}${getAssetPath('/tempo/tiles')}/4/2/10.png`,
+      `${window.location.origin}${getAssetPath('/tempo/tiles')}/3/1/5.png`,
+      `${window.location.origin}${getAssetPath('/tempo/tiles')}/5/4/20.png`
     ];
     
     testTileUrls.forEach(testTileUrl => {
@@ -726,9 +727,9 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
       onLoad={handleMapLoad}
     >
       {/* 把 us-states.geojson 加進來 */}
-      <Source id="us-states" type="geojson" data="/data/us-states.geojson" />
+      <Source id="us-states" type="geojson" data={getAssetPath("/data/us-states.geojson")} />
 
-      <Source id="world-mask" type="geojson" data="/data/world-mask.geojson" />
+      <Source id="world-mask" type="geojson" data={getAssetPath("/data/world-mask.geojson")} />
       <Layer
         id="mask"
         type="fill"
@@ -739,7 +740,7 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
         }}
       />
 
-      <Source id="us-states" type="geojson" data="/data/us-states.geojson" />
+      <Source id="us-states" type="geojson" data={getAssetPath("/data/us-states.geojson")} />
       <Layer
         id="us-fill"
         type="fill"
@@ -766,7 +767,7 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
             id="tempo-no2"
             type="raster"
             tiles={[
-              `${window.location.origin}/tempo/tiles/{z}/{x}/{y}.png`
+              `${window.location.origin}${getAssetPath('/tempo/tiles')}/{z}/{x}/{y}.png`
             ]}
             tileSize={256}
             minzoom={2}
@@ -792,7 +793,7 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
       {/* OpenAQ 監測站 - 條件顯示 */}
       {showOpenAQLayer && (
         <>
-          <Source id="openaq-us-stations" type="geojson" data="/data/openaq-us-stations.geojson" />
+          <Source id="openaq-us-stations" type="geojson" data={getAssetPath("/data/openaq-us-stations.geojson")} />
           <Layer
             id="openaq-us-stations-points"
             type="circle"
@@ -818,7 +819,7 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
       {/* Pandora 監測站 - 條件顯示 */}
       {showPandoraLayer && (
         <>
-          <Source id="pandora-us-stations" type="geojson" data="/data/pandora-us-stations.geojson" />
+          <Source id="pandora-us-stations" type="geojson" data={getAssetPath("/data/pandora-us-stations.geojson")} />
           <Layer
             id="pandora-us-stations-points"
             type="circle"
