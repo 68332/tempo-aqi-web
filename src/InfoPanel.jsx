@@ -383,36 +383,31 @@ export default function InfoPanel({
     });
 
     if (data?.nearbyStationsData?.pollutantData) {
-      // 複製附近站點的污染物數據
+      // 複製附近站點的污染物數據 (地面站數據)
       const pollutantData = { ...data.nearbyStationsData.pollutantData };
-      console.log('Original nearby stations pollutant data:', pollutantData);
+      console.log('Original nearby stations pollutant data (ground only):', pollutantData);
       
-      // 如果有 TEMPO 數據，加入或更新 NO2
-      if (data?.tempoData) {
+      // 如果地面站沒有 NO2 數據，但有 TEMPO 數據，則補充 TEMPO NO2
+      if (data?.tempoData && (!pollutantData.no2 || pollutantData.no2.values.length === 0)) {
         const tempoConversion = convertTEMPOColumnToPPB(data.tempoData.value);
-        console.log('TEMPO conversion for nearby stations case:', tempoConversion);
+        console.log('Adding TEMPO NO2 to supplement ground stations data:', tempoConversion);
         
         if (tempoConversion && tempoConversion.ppb > 0) {
-          if (!pollutantData.no2) {
-            pollutantData.no2 = { max: 0, values: [], unit: 'ppb', source: 'ground' };
-          }
-          
-          // 如果衛星數據更高，或者沒有地面 NO2 數據，使用衛星數據
-          if (pollutantData.no2.values.length === 0 || tempoConversion.ppb > pollutantData.no2.max) {
-            pollutantData.no2.max = tempoConversion.ppb;
-            pollutantData.no2.values = [tempoConversion.ppb];
-            pollutantData.no2.source = 'satellite';
-            pollutantData.no2.unit = 'ppb';
-          }
-          console.log('Updated pollutant data with TEMPO NO2:', pollutantData);
+          pollutantData.no2 = {
+            max: tempoConversion.ppb,
+            values: [tempoConversion.ppb],
+            unit: 'ppb',
+            source: 'satellite'
+          };
+          console.log('Updated pollutant data with TEMPO NO2 supplement:', pollutantData);
         }
       }
       
       const aqiResult = calculateAQI(pollutantData);
-      console.log('Calculated AQI from nearby stations (with TEMPO):', aqiResult);
+      console.log('Calculated AQI from nearby stations (with TEMPO supplement if needed):', aqiResult);
       setAqiData(aqiResult);
     } else if (sensorData.length > 0) {
-      // 對於單一監測站，從 sensor 數據計算 AQI
+      // 對於單一監測站，從 sensor 數據計算 AQI (只用地面站數據)
       const pollutantData = {};
       sensorData.forEach(item => {
         if (item.data?.latest?.value !== null && item.data?.latest?.value !== undefined) {
@@ -444,25 +439,27 @@ export default function InfoPanel({
         }
       });
       
-      // 如果有 TEMPO 數據，加入 NO2
-      if (data?.tempoData) {
+      // 如果地面站沒有 NO2 數據，但有 TEMPO 數據，則補充 TEMPO NO2
+      if (data?.tempoData && !pollutantData.no2) {
         const tempoConversion = convertTEMPOColumnToPPB(data.tempoData.value);
+        console.log('Adding TEMPO NO2 to supplement single station data:', tempoConversion);
+        
         if (tempoConversion && tempoConversion.ppb > 0) {
-          pollutantData.no2 = pollutantData.no2 || { max: 0, values: [] };
-          // 如果沒有地面 NO2 數據，或者衛星數據更高，使用衛星數據
-          if (!pollutantData.no2.values.length || tempoConversion.ppb > pollutantData.no2.max) {
-            pollutantData.no2.max = tempoConversion.ppb;
-            pollutantData.no2.values = [tempoConversion.ppb];
-            pollutantData.no2.source = 'satellite';
-          }
+          pollutantData.no2 = {
+            max: tempoConversion.ppb,
+            values: [tempoConversion.ppb],
+            unit: 'ppb',
+            source: 'satellite'
+          };
+          console.log('Updated single station data with TEMPO NO2 supplement:', pollutantData);
         }
       }
       
       const aqiResult = calculateAQI(pollutantData);
-      console.log('Calculated AQI from sensors:', aqiResult);
+      console.log('Calculated AQI from sensors (with TEMPO supplement if needed):', aqiResult);
       setAqiData(aqiResult);
     } else if (data?.tempoData) {
-      // 只有 TEMPO 數據時，嘗試計算基於衛星 NO2 的 AQI
+      // 只有 TEMPO 數據時，單獨計算基於衛星 NO2 的 AQI
       console.log('Processing TEMPO-only data:', data.tempoData);
       const tempoConversion = convertTEMPOColumnToPPB(data.tempoData.value);
       console.log('TEMPO conversion result:', tempoConversion);
