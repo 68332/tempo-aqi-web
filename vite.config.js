@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: process.env.NODE_ENV === 'production' ? '/tempo-aqi-web/' : '/',
+  base: process.env.NODE_ENV === 'production' ? '/Aircast/' : '/',
   server: {
     proxy: {
       '/api/openaq': {
@@ -12,7 +12,7 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/openaq/, ''),
         headers: {
-          'User-Agent': 'tempo-aqi-web/1.0.0'
+          'User-Agent': 'Aircast/1.0.0'
         }
       }, 
       '/api/pandora': {
