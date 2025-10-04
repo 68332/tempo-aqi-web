@@ -1,0 +1,1713 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -95.3262,
+          29.9011
+        ]
+      },
+      "properties": {
+        "station": "AldineTX",
+        "instrument": "Pandora61s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -98.6552,
+          19.1187
+        ]
+      },
+      "properties": {
+        "station": "Altzomoni",
+        "instrument": "Pandora65s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -93.7152,
+          42.025
+        ]
+      },
+      "properties": {
+        "station": "AmesIA",
+        "instrument": "Pandora285s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -97.1142,
+          32.7316
+        ]
+      },
+      "properties": {
+        "station": "ArlingtonTX",
+        "instrument": "Pandora207s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -97.1142,
+          32.7316
+        ]
+      },
+      "properties": {
+        "station": "ArlingtonTX",
+        "instrument": "Pandora207s2"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -84.0697,
+          33.5885
+        ]
+      },
+      "properties": {
+        "station": "AtlantaGA-Conyers",
+        "instrument": "Pandora158s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -84.3855,
+          33.7524
+        ]
+      },
+      "properties": {
+        "station": "AtlantaGA-Downtown",
+        "instrument": "Pandora92s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -84.3982,
+          33.7765
+        ]
+      },
+      "properties": {
+        "station": "AtlantaGA-GATech",
+        "instrument": "Pandora158s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -84.3982,
+          33.7765
+        ]
+      },
+      "properties": {
+        "station": "AtlantaGA-GATech",
+        "instrument": "Pandora173s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -84.2904,
+          33.688
+        ]
+      },
+      "properties": {
+        "station": "AtlantaGA-SouthDeKalb",
+        "instrument": "Pandora237s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -84.2743,
+          33.6892
+        ]
+      },
+      "properties": {
+        "station": "AtlantaGA-SouthDeKalbPerimeter",
+        "instrument": "Pandora237s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -84.3958,
+          33.779
+        ]
+      },
+      "properties": {
+        "station": "AtlantaGA",
+        "instrument": "Pandora158s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -84.3958,
+          33.779
+        ]
+      },
+      "properties": {
+        "station": "AtlantaGA",
+        "instrument": "Pandora173s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -97.7544,
+          30.2285
+        ]
+      },
+      "properties": {
+        "station": "AustinTX",
+        "instrument": "Pandora257s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -74.1261,
+          40.6703
+        ]
+      },
+      "properties": {
+        "station": "BayonneNJ",
+        "instrument": "Pandora38s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.8783,
+          39.0553
+        ]
+      },
+      "properties": {
+        "station": "BeltsvilleMD",
+        "instrument": "Pandora80s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -88.3725,
+          40.052
+        ]
+      },
+      "properties": {
+        "station": "BondvilleIL",
+        "instrument": "Pandora83s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.104,
+          42.3497
+        ]
+      },
+      "properties": {
+        "station": "BostonMA",
+        "instrument": "Pandora155s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -105.242,
+          40.0375
+        ]
+      },
+      "properties": {
+        "station": "BoulderCO-NCAR",
+        "instrument": "Pandora204s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -105.242,
+          40.0375
+        ]
+      },
+      "properties": {
+        "station": "BoulderCO-NCAR",
+        "instrument": "Pandora252s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -105.26,
+          39.99
+        ]
+      },
+      "properties": {
+        "station": "BoulderCO",
+        "instrument": "Pandora57s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -74.8824,
+          40.1074
+        ]
+      },
+      "properties": {
+        "station": "BristolPA",
+        "instrument": "Pandora134s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.8781,
+          40.8679
+        ]
+      },
+      "properties": {
+        "station": "BronxNY",
+        "instrument": "Pandora147s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.8781,
+          40.8679
+        ]
+      },
+      "properties": {
+        "station": "BronxNY",
+        "instrument": "Pandora180s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -78.7869,
+          43.0015
+        ]
+      },
+      "properties": {
+        "station": "BuffaloNY",
+        "instrument": "Pandora206s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -89.4137,
+          18.5956
+        ]
+      },
+      "properties": {
+        "station": "Calakmul",
+        "instrument": "Pandora141s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -105.0398,
+          69.1212
+        ]
+      },
+      "properties": {
+        "station": "CambridgeBay",
+        "instrument": "Pandora281s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.11,
+          42.38
+        ]
+      },
+      "properties": {
+        "station": "CambridgeMA",
+        "instrument": "Pandora26s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -93.1072,
+          29.7881
+        ]
+      },
+      "properties": {
+        "station": "CameronLA",
+        "instrument": "Pandora260s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.2073,
+          43.561
+        ]
+      },
+      "properties": {
+        "station": "CapeElizabethME",
+        "instrument": "Pandora184s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -79.0933,
+          35.9708
+        ]
+      },
+      "properties": {
+        "station": "ChapelHillNC",
+        "instrument": "Pandora70s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -77.2057,
+          37.326
+        ]
+      },
+      "properties": {
+        "station": "CharlesCityVA",
+        "instrument": "Pandora31s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -77.2057,
+          37.326
+        ]
+      },
+      "properties": {
+        "station": "CharlesCityVA",
+        "instrument": "Pandora40s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.0307,
+          42.3946
+        ]
+      },
+      "properties": {
+        "station": "ChelseaMA",
+        "instrument": "Pandora153s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -87.712,
+          41.9748
+        ]
+      },
+      "properties": {
+        "station": "ChicagoIL",
+        "instrument": "Pandora249s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.2973,
+          41.8213
+        ]
+      },
+      "properties": {
+        "station": "CornwallCT",
+        "instrument": "Pandora179s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -97.3287,
+          27.715
+        ]
+      },
+      "properties": {
+        "station": "CorpusChristiTX",
+        "instrument": "Pandora258s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.1488,
+          42.3067
+        ]
+      },
+      "properties": {
+        "station": "DearbornMI",
+        "instrument": "Pandora39s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -79.468,
+          43.781
+        ]
+      },
+      "properties": {
+        "station": "Downsview",
+        "instrument": "Pandora103s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -79.468,
+          43.781
+        ]
+      },
+      "properties": {
+        "station": "Downsview",
+        "instrument": "Pandora104s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -79.468,
+          43.781
+        ]
+      },
+      "properties": {
+        "station": "Downsview",
+        "instrument": "Pandora122s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -79.468,
+          43.781
+        ]
+      },
+      "properties": {
+        "station": "Downsview",
+        "instrument": "Pandora170s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -79.468,
+          43.781
+        ]
+      },
+      "properties": {
+        "station": "Downsview",
+        "instrument": "Pandora243s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -79.468,
+          43.781
+        ]
+      },
+      "properties": {
+        "station": "Downsview",
+        "instrument": "Pandora284s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.361,
+          41.841
+        ]
+      },
+      "properties": {
+        "station": "EastProvidenceRI",
+        "instrument": "Pandora185s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.8811,
+          34.96
+        ]
+      },
+      "properties": {
+        "station": "EdwardsCA",
+        "instrument": "Pandora74s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -79.78,
+          44.23
+        ]
+      },
+      "properties": {
+        "station": "Egbert",
+        "instrument": "Pandora108s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -79.78,
+          44.23
+        ]
+      },
+      "properties": {
+        "station": "Egbert",
+        "instrument": "Pandora169s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.4745,
+          39.3109
+        ]
+      },
+      "properties": {
+        "station": "EssexMD",
+        "instrument": "Pandora75s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -85.9389,
+          79.9903
+        ]
+      },
+      "properties": {
+        "station": "Eureka-0PAL",
+        "instrument": "Pandora280s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -86.416,
+          80.0533
+        ]
+      },
+      "properties": {
+        "station": "Eureka-PEARL",
+        "instrument": "Pandora144s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -147.8499,
+          64.8594
+        ]
+      },
+      "properties": {
+        "station": "FairbanksAK",
+        "instrument": "Pandora174s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -147.85,
+          64.86
+        ]
+      },
+      "properties": {
+        "station": "FairbanksAK",
+        "instrument": "Pandora29s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -65.6184,
+          18.3797
+        ]
+      },
+      "properties": {
+        "station": "Fajardo",
+        "instrument": "Pandora29s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -65.6184,
+          18.3797
+        ]
+      },
+      "properties": {
+        "station": "Fajardo",
+        "instrument": "Pandora60s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -100.676,
+          46.0857
+        ]
+      },
+      "properties": {
+        "station": "FortYatesND",
+        "instrument": "Pandora205s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -97.0865,
+          47.9219
+        ]
+      },
+      "properties": {
+        "station": "GrandForksND",
+        "instrument": "Pandora200s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.8396,
+          38.9926
+        ]
+      },
+      "properties": {
+        "station": "GreenbeltMD",
+        "instrument": "Pandora2s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.8396,
+          38.9926
+        ]
+      },
+      "properties": {
+        "station": "GreenbeltMD",
+        "instrument": "Pandora32s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.8396,
+          38.9926
+        ]
+      },
+      "properties": {
+        "station": "GreenbeltMD",
+        "instrument": "Pandora71s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -90.4838,
+          14.6192
+        ]
+      },
+      "properties": {
+        "station": "GuatemalaCity",
+        "instrument": "Pandora94s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.3366,
+          37.0203
+        ]
+      },
+      "properties": {
+        "station": "HamptonVA-HU",
+        "instrument": "Pandora156s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.3868,
+          37.1036
+        ]
+      },
+      "properties": {
+        "station": "HamptonVA",
+        "instrument": "Pandora37s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -95.2045,
+          29.579
+        ]
+      },
+      "properties": {
+        "station": "HoustonTX-SanJacinto",
+        "instrument": "Pandora261s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -95.34,
+          29.72
+        ]
+      },
+      "properties": {
+        "station": "HoustonTX",
+        "instrument": "Pandora25s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -86.6464,
+          34.7252
+        ]
+      },
+      "properties": {
+        "station": "HuntsvilleAL",
+        "instrument": "Pandora66s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -91.5827,
+          41.6548
+        ]
+      },
+      "properties": {
+        "station": "IowaCityIA-WHS",
+        "instrument": "Pandora246s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -87.8093,
+          42.5047
+        ]
+      },
+      "properties": {
+        "station": "KenoshaWI",
+        "instrument": "Pandora167s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -95.0647,
+          29.6721
+        ]
+      },
+      "properties": {
+        "station": "LaPorteTX",
+        "instrument": "Pandora11s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -95.0647,
+          29.6721
+        ]
+      },
+      "properties": {
+        "station": "LaPorteTX",
+        "instrument": "Pandora58s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -95.0647,
+          29.6721
+        ]
+      },
+      "properties": {
+        "station": "LaPorteTX",
+        "instrument": "Pandora63s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -116.8064,
+          46.3806
+        ]
+      },
+      "properties": {
+        "station": "LapwaiID",
+        "instrument": "Pandora87s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -94.7635,
+          30.0965
+        ]
+      },
+      "properties": {
+        "station": "LibertyTX",
+        "instrument": "Pandora143s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.3801,
+          42.8625
+        ]
+      },
+      "properties": {
+        "station": "LondonderryNH",
+        "instrument": "Pandora183s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.9708,
+          42.4746
+        ]
+      },
+      "properties": {
+        "station": "LynnMA",
+        "instrument": "Pandora107s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.9708,
+          42.4746
+        ]
+      },
+      "properties": {
+        "station": "LynnMA",
+        "instrument": "Pandora153s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -72.5533,
+          41.2568
+        ]
+      },
+      "properties": {
+        "station": "MadisonCT",
+        "instrument": "Pandora186s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -96.6096,
+          39.1022
+        ]
+      },
+      "properties": {
+        "station": "ManhattanKS",
+        "instrument": "Pandora165s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -96.6096,
+          39.1022
+        ]
+      },
+      "properties": {
+        "station": "ManhattanKS",
+        "instrument": "Pandora178s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9505,
+          40.8153
+        ]
+      },
+      "properties": {
+        "station": "ManhattanNY-CCNY",
+        "instrument": "Pandora135s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -155.6027,
+          19.4795
+        ]
+      },
+      "properties": {
+        "station": "MaunaLoaHI",
+        "instrument": "Pandora56s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -155.6027,
+          19.4795
+        ]
+      },
+      "properties": {
+        "station": "MaunaLoaHI",
+        "instrument": "Pandora59s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -99.1761,
+          19.3262
+        ]
+      },
+      "properties": {
+        "station": "MexicoCity-UNAM",
+        "instrument": "Pandora142s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -99.147,
+          19.483
+        ]
+      },
+      "properties": {
+        "station": "MexicoCity-Vallejo",
+        "instrument": "Pandora157s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -80.3738,
+          25.7569
+        ]
+      },
+      "properties": {
+        "station": "MiamiFL-FIU",
+        "instrument": "Pandora256s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.0568,
+          37.42
+        ]
+      },
+      "properties": {
+        "station": "MountainViewCA",
+        "instrument": "Pandora34s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -74.4294,
+          40.4622
+        ]
+      },
+      "properties": {
+        "station": "NewBrunswickNJ",
+        "instrument": "Pandora69s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -72.9029,
+          41.3014
+        ]
+      },
+      "properties": {
+        "station": "NewHavenCT",
+        "instrument": "Pandora64s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -72.1004,
+          41.3758
+        ]
+      },
+      "properties": {
+        "station": "NewLondonCT",
+        "instrument": "Pandora236s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -90.1074,
+          29.9643
+        ]
+      },
+      "properties": {
+        "station": "NewOrleansLA-XULA",
+        "instrument": "Pandora85s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.1402,
+          40.9635
+        ]
+      },
+      "properties": {
+        "station": "OldFieldNY",
+        "instrument": "Pandora51s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6647,
+          34.8806
+        ]
+      },
+      "properties": {
+        "station": "PaloDuroTX",
+        "instrument": "Pandora89s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -75.0811,
+          39.9919
+        ]
+      },
+      "properties": {
+        "station": "PhiladelphiaPA",
+        "instrument": "Pandora166s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -79.9608,
+          40.4655
+        ]
+      },
+      "properties": {
+        "station": "PittsburghPA",
+        "instrument": "Pandora187s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.8215,
+          40.7361
+        ]
+      },
+      "properties": {
+        "station": "QueensNY",
+        "instrument": "Pandora55s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.336,
+          37.913
+        ]
+      },
+      "properties": {
+        "station": "RichmondCA",
+        "instrument": "Pandora52s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.1068,
+          42.3026
+        ]
+      },
+      "properties": {
+        "station": "SWDetroitMI",
+        "instrument": "Pandora147s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -111.8722,
+          40.7344
+        ]
+      },
+      "properties": {
+        "station": "SaltLakeCityUT-Hawthorne",
+        "instrument": "Pandora72s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -111.8478,
+          40.7663
+        ]
+      },
+      "properties": {
+        "station": "SaltLakeCityUT",
+        "instrument": "Pandora154s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -98.5025,
+          29.4229
+        ]
+      },
+      "properties": {
+        "station": "SanAntonioTX",
+        "instrument": "Pandora88s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.8821,
+          37.3325
+        ]
+      },
+      "properties": {
+        "station": "SanJoseCA",
+        "instrument": "Pandora181s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -112.07,
+          40.548
+        ]
+      },
+      "properties": {
+        "station": "SouthJordanUT",
+        "instrument": "Pandora139s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -79.3986,
+          43.6605
+        ]
+      },
+      "properties": {
+        "station": "StGeorge",
+        "instrument": "Pandora109s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -79.3986,
+          43.6605
+        ]
+      },
+      "properties": {
+        "station": "StGeorge",
+        "instrument": "Pandora170s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -89.9999,
+          42.2872
+        ]
+      },
+      "properties": {
+        "station": "StocktonIL",
+        "instrument": "Pandora81s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -114.11,
+          53.55
+        ]
+      },
+      "properties": {
+        "station": "StonyPlain",
+        "instrument": "Pandora123s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -79.3871,
+          43.6426
+        ]
+      },
+      "properties": {
+        "station": "Toronto-CNTower",
+        "instrument": "Pandora243s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -79.1874,
+          43.7843
+        ]
+      },
+      "properties": {
+        "station": "Toronto-Scarborough",
+        "instrument": "Pandora145s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -79.5435,
+          43.7094
+        ]
+      },
+      "properties": {
+        "station": "Toronto-West",
+        "instrument": "Pandora108s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -111.2212,
+          36.127
+        ]
+      },
+      "properties": {
+        "station": "TubaCityAZ",
+        "instrument": "Pandora254s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -110.953,
+          32.233
+        ]
+      },
+      "properties": {
+        "station": "TucsonAZ",
+        "instrument": "Pandora253s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -120.855,
+          37.523
+        ]
+      },
+      "properties": {
+        "station": "TurlockCA",
+        "instrument": "Pandora248s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -95.4159,
+          32.344
+        ]
+      },
+      "properties": {
+        "station": "TylerTX",
+        "instrument": "Pandora259s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.0766,
+          37.0367
+        ]
+      },
+      "properties": {
+        "station": "VirginiaBeachVA-CBBT",
+        "instrument": "Pandora255s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -97.1142,
+          31.5477
+        ]
+      },
+      "properties": {
+        "station": "WacoTX",
+        "instrument": "Pandora207s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -75.4775,
+          37.8439
+        ]
+      },
+      "properties": {
+        "station": "WallopsIslandVA",
+        "instrument": "Pandora40s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -77.0124,
+          38.9218
+        ]
+      },
+      "properties": {
+        "station": "WashingtonDC",
+        "instrument": "Pandora140s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.3367,
+          41.1183
+        ]
+      },
+      "properties": {
+        "station": "WestportCT",
+        "instrument": "Pandora177s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.3367,
+          41.1183
+        ]
+      },
+      "properties": {
+        "station": "WestportCT",
+        "instrument": "Pandora53s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.0299,
+          33.9768
+        ]
+      },
+      "properties": {
+        "station": "WhittierCA",
+        "instrument": "Pandora247s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.0731,
+          42.2929
+        ]
+      },
+      "properties": {
+        "station": "Windsor-West",
+        "instrument": "Pandora208s1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.6813,
+          34.3819
+        ]
+      },
+      "properties": {
+        "station": "WrightwoodCA",
+        "instrument": "Pandora68s1"
+      }
+    }
+  ]
+}

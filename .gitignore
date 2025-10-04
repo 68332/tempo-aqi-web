@@ -1,0 +1,57 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Python virtual environment
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# Large data files and directories
+*.nc
+*.tif
+*.tiff
+*.hdf
+*.h5
+*.hdf5
+*.zip
+
+# Environment files
+*.env
+.env.local
+
+# TEMPO data directories
+/tempo
+public/tempo/
+public/data/
+
+# Tiles and processed data
+tiles/
+geotiff/
+no2/
