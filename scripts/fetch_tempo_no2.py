@@ -107,7 +107,7 @@ def get_earthdata_session():
     
     # 設定 User-Agent，某些服務需要
     session.headers.update({
-        'User-Agent': 'tempo-aqi-web/1.0 (Python requests)'
+        'User-Agent': 'Aircast/1.0 (Python requests)'
     })
     
     # 測試認證是否有效
