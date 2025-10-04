@@ -1,12 +1,27 @@
-# React + Vite
+<div align="center">
+  <img src="image-3.png" alt="Aircast Logo" width="400"/>
+</div>
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# Aircast: From Orbit to Earth — Toward Unified Air Quality Sensing
 
-Currently, two official plugins are available:
+<div align="center">
+  
+[![License](https://img.shields.io/badge/License-MIT-green?style=plastic-square)](LICENSE)
+&nbsp;&nbsp;
+[![Built with](https://img.shields.io/badge/Built%20with-Vite%20%2B%20React-61dafb?style=plastic-square&logo=react)](https://vitejs.dev/)
+&nbsp;&nbsp;
+[![Data Source](https://img.shields.io/badge/Data%20Source-NASA-orange?style=plastic-square)](https://www.spaceappschallenge.org/2025/challenges/from-earthdata-to-action-cloud-computing-with-earth-observation-data-for-predicting-cleaner-safer-skies/?tab=resources)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+</div>
 
-## Expanding the ESLint configuration
+## Introduction
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Project Structure
+
+## Deployment
+
+## References
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
