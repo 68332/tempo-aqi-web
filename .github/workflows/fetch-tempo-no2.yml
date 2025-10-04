@@ -75,7 +75,7 @@ jobs:
         run: |
           mkdir -p gh-pages/tempo
           ls -R public
-          rsync -av ../public/tempo/tiles /home/runner/work/tempo-aqi-web/tempo-aqi-web/gh-pages/tempo/
+          rsync -av ../public/tempo/tiles /home/runner/work/Aircast/Aircast/gh-pages/tempo/
           echo "---- List gh-pages/tempo ----"
           ls -R gh-pages/tempo || true
       # 7) 提交 & 推送 gh-pages
