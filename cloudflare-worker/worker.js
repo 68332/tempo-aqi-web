@@ -62,9 +62,9 @@ async function handleApiRequest(request, url) {
     let targetUrl;
 
     if (targetPath.startsWith('/ml/')) {
-      // ML API 代理
+      // ML API 代理 - 暫時回到直接使用 IP，等網域設定完成後再改回來
       const mlPath = targetPath.replace('/ml', '');
-      targetUrl = `http://167.179.86.141:8000${mlPath}${url.search}`;
+      targetUrl = `https://aircast.jylin.dev:8000/${mlPath}${url.search}`;
     } else if (targetPath.startsWith('/openaq/')) {
       // OpenAQ API 代理
       const openaqPath = targetPath.replace('/openaq', '');
@@ -121,10 +121,15 @@ async function handleApiRequest(request, url) {
     // 為所有請求添加瀏覽器 User-Agent 以避免被阻擋
     newHeaders.set('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     
-    // 為 ML API 添加額外的標頭
+    // 為 ML API 添加額外的標頭來模擬真實瀏覽器
     if (targetPath.startsWith('/ml/')) {
       newHeaders.set('Referer', 'https://aircast68332.workers.dev/');
       newHeaders.set('Accept-Language', 'en-US,en;q=0.9');
+      newHeaders.set('Sec-Fetch-Dest', 'empty');
+      newHeaders.set('Sec-Fetch-Mode', 'cors');
+      newHeaders.set('Sec-Fetch-Site', 'cross-site');
+      newHeaders.set('Cache-Control', 'no-cache');
+      newHeaders.set('Pragma', 'no-cache');
     }
 
     // 為 OpenAQ API 添加 User-Agent
