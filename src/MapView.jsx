@@ -693,6 +693,7 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
     );
     if (stationFeature) {
       const { lng, lat } = event.lngLat;
+      const stationId = stationFeature.properties.id; // 取得站點 ID
       const stationName = stationFeature.properties.name;
       const provider = stationFeature.properties.provider;
       const timezone = stationFeature.properties.timezone;
@@ -708,12 +709,13 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
         }
       }
 
-      console.log('Station clicked:', stationName, 'Sensors:', sensors); // Debug 用
+      console.log('Station clicked:', stationName, 'ID:', stationId, 'Sensors:', sensors); // Debug 用
       console.log('Sensors type in MapView:', typeof sensors, 'Is array:', Array.isArray(sensors)); // Debug
 
       if (onSelect) {
         // 先顯示載入狀態
         onSelect({
+          id: stationId, // 添加站點 ID
           lng,
           lat,
           stateName: 'Air Quality Station',
@@ -731,6 +733,7 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
         // 同時獲取 TEMPO 資料
         getTEMPOValue(lng, lat).then(tempoValue => {
           onSelect({
+            id: stationId, // 添加站點 ID
             lng,
             lat,
             stateName: 'Air Quality Station',
@@ -747,6 +750,7 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
         }).catch(error => {
           console.error('Error getting TEMPO data for station:', error);
           onSelect({
+            id: stationId, // 添加站點 ID
             lng,
             lat,
             stateName: 'Air Quality Station',

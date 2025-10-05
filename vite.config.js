@@ -20,6 +20,12 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: p => p.replace(/^\/api\/pandora/, ''),
       },
+      '/api/ml': {
+        target: 'http://167.179.86.141:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/ml/, ''),
+        secure: false
+      }
     }
   }
 })

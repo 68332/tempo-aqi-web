@@ -35,6 +35,8 @@ export default function InfoPanel({
   const [titleKey, setTitleKey] = React.useState(0);
   const [aqiData, setAqiData] = React.useState(null);
   const [tempoObservationTime, setTempoObservationTime] = React.useState(null);
+  const [mlPrediction, setMlPrediction] = React.useState(null);
+  const [mlPredictionLoading, setMlPredictionLoading] = React.useState(false);
   
   // 獲取 TEMPO 數據的觀測時間（與 MapView 中的邏輯一致）
   const getTEMPOObservationTime = async () => {
@@ -269,17 +271,31 @@ export default function InfoPanel({
   // 當 data 改變且有 sensors 時，獲取 sensor 資料
   React.useEffect(() => {
     if (data) {
+      console.log('InfoPanel data changed:', { id: data.id, type: data.type }); // Debug
+      
       // if data is from openaq
       if (data.type === 'openaq') {
         if (data && data.sensors && data.sensors.length > 0) {
           console.log('Fetching data for sensors:', data.sensors); // Debug
           fetchSensorData(data.sensors);
+          
+          // 如果是站點 221，獲取機器學習預測
+          if (parseInt(data.id) === 221) {
+            console.log('Station 221 detected, fetching ML prediction'); // Debug
+            fetchMlPrediction(data.id);
+          }
         } else {
           setSensorData([]);
         }
         // if data is from pandora
       } else if (data.type === 'pandora') {
         fetchPandoraData(data);
+        
+        // 如果是站點 221，獲取機器學習預測
+        if (parseInt(data.id) === 221) {
+          console.log('Station 221 detected (Pandora), fetching ML prediction'); // Debug
+          fetchMlPrediction(data.id);
+        }
       }
     }
   }, [data]);
@@ -494,6 +510,37 @@ export default function InfoPanel({
       setAqiData(null);
     }
   }, [data?.nearbyStationsData, sensorData, data?.tempoData]);
+
+  // 獲取機器學習預測數據
+  const fetchMlPrediction = async (stationId) => {
+    console.log('fetchMlPrediction called with stationId:', stationId, 'type:', typeof stationId);
+    
+    // 支援字串和數字格式的 ID 比較
+    const id = parseInt(stationId);
+    
+    if (id !== 221) {
+      console.log('Not station 221, skipping ML prediction. Station ID:', stationId, 'Parsed:', id);
+      return;
+    }
+    
+    setMlPredictionLoading(true);
+    
+    console.log('Fetching ML prediction for station 221');
+    try {
+      const response = await fetch(`/api/ml/predict_aqi?station_id=${stationId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log('ML prediction response:', data);
+      setMlPrediction(data);
+    } catch (error) {
+      console.error('Error fetching ML prediction:', error);
+      setMlPrediction(null);
+    } finally {
+      setMlPredictionLoading(false);
+    }
+  };
 
   // 獲取 sensor 資料的函數
   const fetchSensorData = async (sensors) => {
@@ -899,6 +946,78 @@ export default function InfoPanel({
                     Dominant: {aqiData.dominantPollutant.toUpperCase()}
                   </Typography>
                 </Paper>
+              </Box>
+            )}
+
+            {/* ML Prediction 顯示 - 只對站點 221 顯示 */}
+            {parseInt(data?.id) === 221 && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="caption" color="text.secondary">
+                  ML Predicted AQI (Next Hour)
+                </Typography>
+                {mlPredictionLoading ? (
+                  <Paper 
+                    sx={{ 
+                      p: 1.5, 
+                      backgroundColor: 'rgba(117, 117, 117, 0.1)',
+                      textAlign: 'center',
+                      mt: 0.5
+                    }}
+                  >
+                    <CircularProgress size={24} />
+                    <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
+                      Predicting...
+                    </Typography>
+                  </Paper>
+                ) : mlPrediction ? (
+                  <Paper 
+                    sx={{ 
+                      p: 1.5, 
+                      backgroundColor: getAQIInfo(mlPrediction.result?.AQI || 0).color,
+                      color: getAQIInfo(mlPrediction.result?.AQI || 0).textColor,
+                      textAlign: 'center',
+                      mt: 0.5
+                    }}
+                  >
+                    <Typography variant="h4" fontWeight="bold">
+                      {mlPrediction.result?.AQI || 0}
+                    </Typography>
+                    <Typography variant="body2" fontWeight="600">
+                      {getAQIInfo(mlPrediction.result?.AQI || 0).level}
+                    </Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                      Dominant: {mlPrediction.result?.Dominant?.toUpperCase() || 'N/A'}
+                    </Typography>
+                    
+                    {/* 詳細污染物預測 */}
+                    {mlPrediction.result?.Detail && (
+                      <Box sx={{ mt: 0.5, pt: 0.5, borderTop: '1px solid rgba(255, 255, 255, 0.2)' }}>
+                        <Grid container spacing={1} sx={{ justifyContent: 'center' }}>
+                          {Object.entries(mlPrediction.result.Detail).map(([pollutant, value]) => (
+                            <Grid item xs={4} key={pollutant}>
+                              <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.8, textAlign: 'center', display: 'block' }}>
+                                {pollutant.toUpperCase()}: {value}
+                              </Typography>
+                            </Grid>
+                          ))}
+                        </Grid>
+                      </Box>
+                    )}
+                  </Paper>
+                ) : (
+                  <Paper 
+                    sx={{ 
+                      p: 1.5, 
+                      backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                      textAlign: 'center',
+                      mt: 0.5
+                    }}
+                  >
+                    <Typography variant="caption" color="error.main">
+                      Prediction unavailable
+                    </Typography>
+                  </Paper>
+                )}
               </Box>
             )}
 
