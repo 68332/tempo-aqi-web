@@ -712,6 +712,7 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
       console.log('Sensors type in MapView:', typeof sensors, 'Is array:', Array.isArray(sensors)); // Debug
 
       if (onSelect) {
+        // 先顯示載入狀態
         onSelect({
           lng,
           lat,
@@ -722,7 +723,43 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
           sensors, // 傳遞 sensors 資料
           isStation: true,
           stationType: 'OpenAQ',
-          type: 'openaq' // 添加 type 屬性供 InfoPanel 使用
+          type: 'openaq', // 添加 type 屬性供 InfoPanel 使用
+          tempoData: null,
+          loadingTempoData: true
+        });
+
+        // 同時獲取 TEMPO 資料
+        getTEMPOValue(lng, lat).then(tempoValue => {
+          onSelect({
+            lng,
+            lat,
+            stateName: 'Air Quality Station',
+            stationName,
+            provider,
+            timezone,
+            sensors, // 傳遞 sensors 資料
+            isStation: true,
+            stationType: 'OpenAQ',
+            type: 'openaq', // 添加 type 屬性供 InfoPanel 使用
+            tempoData: tempoValue,
+            loadingTempoData: false
+          });
+        }).catch(error => {
+          console.error('Error getting TEMPO data for station:', error);
+          onSelect({
+            lng,
+            lat,
+            stateName: 'Air Quality Station',
+            stationName,
+            provider,
+            timezone,
+            sensors, // 傳遞 sensors 資料
+            isStation: true,
+            stationType: 'OpenAQ',
+            type: 'openaq', // 添加 type 屬性供 InfoPanel 使用
+            tempoData: null,
+            loadingTempoData: false
+          });
         });
       }
       return;
@@ -740,13 +777,42 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
       console.log('Pandora Station clicked:', stationName, 'Instrument:', instrument);
 
       if (onSelect) {
+        // 先顯示載入狀態
         onSelect({
           lng,
           lat,
           stationName,
           instrument,
           isStation: true,
-          type: 'pandora'
+          type: 'pandora',
+          tempoData: null,
+          loadingTempoData: true
+        });
+
+        // 同時獲取 TEMPO 資料
+        getTEMPOValue(lng, lat).then(tempoValue => {
+          onSelect({
+            lng,
+            lat,
+            stationName,
+            instrument,
+            isStation: true,
+            type: 'pandora',
+            tempoData: tempoValue,
+            loadingTempoData: false
+          });
+        }).catch(error => {
+          console.error('Error getting TEMPO data for Pandora station:', error);
+          onSelect({
+            lng,
+            lat,
+            stationName,
+            instrument,
+            isStation: true,
+            type: 'pandora',
+            tempoData: null,
+            loadingTempoData: false
+          });
         });
       }
       return;
