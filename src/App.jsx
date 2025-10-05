@@ -780,6 +780,7 @@ export default function App() {
           fontSize: '12px',
           color: '#374151',
           fontWeight: '500',
+          fontFamily: 'system-ui, -apple-system, sans-serif', // 統一字體
           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
           border: '1px solid rgba(255, 255, 255, 0.2)',
           zIndex: 5,
@@ -939,6 +940,7 @@ export default function App() {
           padding: '3px 10px',
           fontSize: '12px',
           color: '#374151',
+          fontFamily: 'system-ui, -apple-system, sans-serif', // 統一字體
           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
           border: '1px solid rgba(255, 255, 255, 0.2)',
           zIndex: 5
