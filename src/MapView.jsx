@@ -127,9 +127,9 @@ export default function MapView({
   const getStationColor = (stationId, opacity = 1) => {
     if (featuredStationsData && Array.isArray(featuredStationsData) && featuredStationsData.length > 0) {
       const stationData = featuredStationsData.find(station => station && station.id === stationId);
-      if (stationData && stationData.aqiColor) {
-        // 使用AQI顏色，調整不透明度
-        const color = stationData.aqiColor;
+      if (stationData) {
+        // 如果有 AQI 顏色就使用，否則使用灰色
+        const color = stationData.aqiColor || "#9CA3AF";
         // 將hex顏色轉換為rgba
         const hexToRgba = (hex, alpha) => {
           const r = parseInt(hex.slice(1, 3), 16);
@@ -140,14 +140,14 @@ export default function MapView({
         return hexToRgba(color, opacity);
       }
     }
-    // 預設為紅色（如果沒有AQI數據）
-    return `rgba(220, 38, 38, ${opacity})`;
+    // 預設為灰色（如果沒有數據）
+    return `rgba(156, 163, 175, ${opacity})`;
   };
 
   // 創建MapLibre顏色表達式
-  const createColorExpression = (defaultColor = "#DC2626") => {
+  const createColorExpression = (defaultColor = "#9CA3AF") => {
     if (!featuredStationsData || !Array.isArray(featuredStationsData) || featuredStationsData.length === 0) {
-      console.log('createColorExpression: No valid featured stations data, using default color');
+      console.log('createColorExpression: No valid featured stations data, using default gray color');
       return defaultColor;
     }
 
@@ -156,15 +156,16 @@ export default function MapView({
     let addedStations = 0;
     
     featuredStationsData.forEach(station => {
-      if (station && station.id && station.aqiColor) {
+      if (station && station.id) {
         expression.push(["==", ["get", "id"], station.id]);
-        expression.push(station.aqiColor);
+        // 如果有 AQI 顏色就使用，否則使用灰色
+        expression.push(station.aqiColor || "#9CA3AF");
         addedStations++;
-        console.log(`Added color mapping: Station ${station.id} -> ${station.aqiColor}`);
+        console.log(`Added color mapping: Station ${station.id} -> ${station.aqiColor || "#9CA3AF (default gray)"}`);
       }
     });
     
-    // 預設顏色
+    // 預設顏色（灰色）
     expression.push(defaultColor);
     
     console.log(`createColorExpression: Created expression with ${addedStations} station color mappings`);
@@ -1110,10 +1111,10 @@ export default function MapView({
                 8, 65 + Math.sin(animationTime * 1.5) * 15,
                 15, 90 + Math.sin(animationTime * 1.5) * 20
               ],
-              "circle-color": createColorExpression("#EF4444"),
+              "circle-color": createColorExpression("#9CA3AF"),
               "circle-opacity": Math.max(0.05, 0.15 + Math.sin(animationTime * 2) * 0.1),
               "circle-stroke-width": 1,
-              "circle-stroke-color": createColorExpression("#EF4444"),
+              "circle-stroke-color": createColorExpression("#9CA3AF"),
               "circle-stroke-opacity": Math.max(0.1, 0.25 + Math.sin(animationTime * 2) * 0.15)
             }}
           />
@@ -1133,10 +1134,10 @@ export default function MapView({
                 8, 45 + Math.sin(animationTime * 1.8 + 1) * 12,
                 15, 65 + Math.sin(animationTime * 1.8 + 1) * 15
               ],
-              "circle-color": createColorExpression("#EF4444"),
+              "circle-color": createColorExpression("#9CA3AF"),
               "circle-opacity": Math.max(0.08, 0.2 + Math.sin(animationTime * 2.2 + 1) * 0.12),
               "circle-stroke-width": 1,
-              "circle-stroke-color": createColorExpression("#EF4444"),
+              "circle-stroke-color": createColorExpression("#9CA3AF"),
               "circle-stroke-opacity": Math.max(0.15, 0.3 + Math.sin(animationTime * 2.2 + 1) * 0.15)
             }}
           />
@@ -1156,10 +1157,10 @@ export default function MapView({
                 8, 30 + Math.sin(animationTime * 2.1 + 2) * 8,
                 15, 42 + Math.sin(animationTime * 2.1 + 2) * 12
               ],
-              "circle-color": createColorExpression("#EF4444"),
+              "circle-color": createColorExpression("#9CA3AF"),
               "circle-opacity": Math.max(0.1, 0.25 + Math.sin(animationTime * 2.5 + 2) * 0.15),
               "circle-stroke-width": 2,
-              "circle-stroke-color": createColorExpression("#DC2626"),
+              "circle-stroke-color": createColorExpression("#8D8D8D"),
               "circle-stroke-opacity": Math.max(0.2, 0.4 + Math.sin(animationTime * 2.5 + 2) * 0.2)
             }}
           />
@@ -1179,10 +1180,10 @@ export default function MapView({
                 8, 18 + Math.sin(animationTime * 2.4 + 3) * 6,
                 15, 25 + Math.sin(animationTime * 2.4 + 3) * 8
               ],
-              "circle-color": createColorExpression("#EF4444"),
+              "circle-color": createColorExpression("#9CA3AF"),
               "circle-opacity": Math.max(0.15, 0.3 + Math.sin(animationTime * 2.8 + 3) * 0.2),
               "circle-stroke-width": 2,
-              "circle-stroke-color": createColorExpression("#DC2626"),
+              "circle-stroke-color": createColorExpression("#8D8D8D"),
               "circle-stroke-opacity": Math.max(0.25, 0.45 + Math.sin(animationTime * 2.8 + 3) * 0.25)
             }}
           />
@@ -1202,7 +1203,7 @@ export default function MapView({
                 8, 10 + Math.sin(animationTime * 3) * 2,
                 15, 16 + Math.sin(animationTime * 3) * 3
               ],
-              "circle-color": createColorExpression("#DC2626"),
+              "circle-color": createColorExpression("#8D8D8D"),
               "circle-stroke-color": "#FFFFFF",
               "circle-stroke-width": 3,
               "circle-opacity": 0.8 + Math.sin(animationTime * 3) * 0.15

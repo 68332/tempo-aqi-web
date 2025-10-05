@@ -136,6 +136,7 @@ export default function App() {
   const loadFeaturedStationsData = async () => {
     try {
       console.log('Loading featured stations data...');
+      setIsLoadingFeaturedStations(true);
       
       // OpenAQ API Key
       const API_KEY = 'f842213920405091f23318ca1a7880636ac843b7cb81f8e3985c41b17deb19f2';
@@ -147,9 +148,21 @@ export default function App() {
       }
       const geojsonData = await geojsonResponse.json();
       
-      const updatedStations = [];
+      // 初始化所有站點為載入中狀態
+      const initialStations = FEATURED_STATIONS.map(station => ({
+        ...station,
+        aqi: null,
+        aqiLevel: 'Loading...',
+        aqiColor: '#9CA3AF',
+        lastUpdated: null,
+        measurements: [],
+        sensors: []
+      }));
+      
+      setFeaturedStationsData(initialStations);
 
-      for (const station of FEATURED_STATIONS) {
+      // 並行處理所有站點，每個載入完成後立即更新
+      const processStation = async (station, index) => {
         try {
           console.log(`Processing featured station: ${station.name}`);
           
@@ -251,7 +264,7 @@ export default function App() {
               console.warn(`Unable to calculate AQI for station: ${station.name}, pollutants:`, pollutants);
             }
             
-            updatedStations.push({
+            const updatedStation = {
               ...station,
               id: matchingFeature.properties.id,
               actualName: matchingFeature.properties.name,
@@ -262,11 +275,20 @@ export default function App() {
               lastUpdated: measurements.length > 0 ? measurements[0].lastUpdated : null,
               measurements: measurements,
               sensors: sensors
+            };
+
+            // 立即更新這個站點的數據
+            setFeaturedStationsData(prevStations => {
+              const newStations = [...prevStations];
+              newStations[index] = updatedStation;
+              return newStations;
             });
+
+            return updatedStation;
           } else {
             console.warn(`No matching station found in GeoJSON for: ${station.name}`);
-            // 如果在 GeoJSON 中找不到匹配的站點，添加不含 AQI 數據的站點
-            updatedStations.push({
+            
+            const fallbackStation = {
               ...station,
               aqi: null,
               aqiLevel: 'Unknown',
@@ -274,27 +296,54 @@ export default function App() {
               lastUpdated: null,
               measurements: [],
               sensors: []
+            };
+
+            // 立即更新這個站點為未知狀態
+            setFeaturedStationsData(prevStations => {
+              const newStations = [...prevStations];
+              newStations[index] = fallbackStation;
+              return newStations;
             });
+
+            return fallbackStation;
           }
         } catch (error) {
           console.error(`Error processing station ${station.name}:`, error);
-          // 如果發生錯誤，添加不含 AQI 數據的站點
-          updatedStations.push({
+          
+          const errorStation = {
             ...station,
             aqi: null,
-            aqiLevel: 'Unknown',
+            aqiLevel: 'Error',
             aqiColor: '#999999',
             lastUpdated: null,
             measurements: [],
             sensors: []
-          });
-        }
-      }
+          };
 
-      console.log('Featured stations data loaded:', updatedStations);
-      setFeaturedStationsData(updatedStations);
+          // 立即更新這個站點為錯誤狀態
+          setFeaturedStationsData(prevStations => {
+            const newStations = [...prevStations];
+            newStations[index] = errorStation;
+            return newStations;
+          });
+
+          return errorStation;
+        }
+      };
+
+      // 並行處理所有站點
+      const stationPromises = FEATURED_STATIONS.map((station, index) => 
+        processStation(station, index)
+      );
+
+      // 等待所有站點處理完成
+      await Promise.all(stationPromises);
+      
+      console.log('All featured stations data loaded');
+      setIsLoadingFeaturedStations(false);
     } catch (error) {
       console.error('Error loading featured stations data:', error);
+      setIsLoadingFeaturedStations(false);
     }
   };  // 搜尋邏輯
   const searchStations = React.useCallback((query) => {

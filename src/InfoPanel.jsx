@@ -855,7 +855,7 @@ export default function InfoPanel({
         {!data ? (
           <Box>
             {/* 搜尋提示 */}
-            <Typography variant="h6" fontWeight="600" sx={{ mb: 2, color: 'primary.main' }}>
+            <Typography variant="h6" fontWeight="600" sx={{ mb: 2, color: 'black' }}>
               Search or click on map to get real-time air quality
             </Typography>
             
@@ -867,9 +867,12 @@ export default function InfoPanel({
               Real-time AQI from key monitoring stations:
             </Typography>
             
-            {isLoadingFeaturedStations ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+            {isLoadingFeaturedStations || (featuredStationsData && featuredStationsData.some(station => station.aqi === null)) ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2 }}>
                 <CircularProgress size={24} />
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                  Loading AQI data for major cities...
+                </Typography>
               </Box>
             ) : (
               <Box sx={{ mb: 3 }}>
@@ -928,15 +931,18 @@ export default function InfoPanel({
                               }}
                             />
                           ) : (
-                            <Chip
-                              label="Loading..."
-                              size="small"
-                              sx={{
-                                backgroundColor: '#grey.300',
-                                color: 'text.secondary',
-                                fontSize: '0.75rem'
-                              }}
-                            />
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <CircularProgress size={14} sx={{ mr: 0.5 }} />
+                              <Chip
+                                label="Loading..."
+                                size="small"
+                                sx={{
+                                  backgroundColor: 'grey.300',
+                                  color: 'text.secondary',
+                                  fontSize: '0.75rem'
+                                }}
+                              />
+                            </Box>
                           )}
                         </Box>
                         {station.aqi !== null && (
@@ -948,9 +954,12 @@ export default function InfoPanel({
                     );
                   })
                 ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    Loading major cities data...
-                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2 }}>
+                    <CircularProgress size={24} />
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      Loading major cities data...
+                    </Typography>
+                  </Box>
                 )}
               </Box>
             )}
