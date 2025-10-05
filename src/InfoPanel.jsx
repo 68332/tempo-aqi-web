@@ -37,6 +37,7 @@ export default function InfoPanel({
   const [tempoObservationTime, setTempoObservationTime] = React.useState(null);
   const [mlPrediction, setMlPrediction] = React.useState(null);
   const [mlPredictionLoading, setMlPredictionLoading] = React.useState(false);
+  const [prevStationId, setPrevStationId] = React.useState(null);
   
   // 獲取 TEMPO 數據的觀測時間（與 MapView 中的邏輯一致）
   const getTEMPOObservationTime = async () => {
@@ -273,9 +274,11 @@ export default function InfoPanel({
     if (data) {
       console.log('InfoPanel data changed:', { id: data.id, type: data.type }); // Debug
       
-      // 清空之前的 ML prediction
-      setMlPrediction(null);
-      setMlPredictionLoading(false);
+      // 清空之前的 ML prediction (但只在站點真正改變時)
+      if (!mlPredictionLoading || prevStationId !== data.id) {
+        setMlPrediction(null);
+        setMlPredictionLoading(false);
+      }
       
       // if data is from openaq
       if (data.type === 'openaq') {
@@ -283,9 +286,11 @@ export default function InfoPanel({
           console.log('Fetching data for sensors:', data.sensors); // Debug
           fetchSensorData(data.sensors);
           
-          // 為所有 OpenAQ 站點獲取機器學習預測
-          console.log('OpenAQ station detected, fetching ML prediction for station:', data.id); // Debug
-          fetchMlPrediction(data.id);
+          // 只有當不是重複請求時才獲取機器學習預測
+          if (!mlPredictionLoading && prevStationId !== data.id) {
+            console.log('OpenAQ station detected, fetching ML prediction for station:', data.id); // Debug
+            fetchMlPrediction(data.id);
+          }
         } else {
           setSensorData([]);
         }
@@ -293,10 +298,15 @@ export default function InfoPanel({
       } else if (data.type === 'pandora') {
         fetchPandoraData(data);
         
-        // 為所有 Pandora 站點獲取機器學習預測
-        console.log('Pandora station detected, fetching ML prediction for station:', data.id); // Debug
-        fetchMlPrediction(data.id);
+        // 只有當不是重複請求時才獲取機器學習預測
+        if (!mlPredictionLoading && prevStationId !== data.id) {
+          console.log('Pandora station detected, fetching ML prediction for station:', data.id); // Debug
+          fetchMlPrediction(data.id);
+        }
       }
+      
+      // 更新前一個站點 ID
+      setPrevStationId(data.id);
     }
   }, [data]);
 
@@ -399,14 +409,28 @@ export default function InfoPanel({
     return value.toFixed(2);
   };
 
-  // 計算 AQI 當有附近監測站數據、sensor 數據或 TEMPO 數據時
+  // 計算 AQI 當所有資料都載入完成時
   React.useEffect(() => {
     console.log('AQI calculation useEffect triggered:', {
       hasNearbyData: !!data?.nearbyStationsData?.pollutantData,
       sensorDataLength: sensorData.length,
       hasTempoData: !!data?.tempoData,
-      tempoValue: data?.tempoData?.value
+      tempoValue: data?.tempoData?.value,
+      loadingNearbyData: data?.loadingNearbyData,
+      loadingTempoData: data?.loadingTempoData,
+      loading: loading
     });
+
+    // 檢查是否還有資料在載入中
+    const isStillLoading = data?.loadingNearbyData || data?.loadingTempoData || loading;
+    
+    if (isStillLoading) {
+      console.log('Still loading data, waiting for all data to complete...');
+      return; // 如果還有資料在載入，不計算 AQI
+    }
+
+    // 確保所有資料都載入完成後才計算 AQI
+    console.log('All data loaded, calculating AQI...');
 
     if (data?.nearbyStationsData?.pollutantData) {
       // 複製附近站點的污染物數據 (地面站數據)
@@ -509,7 +533,7 @@ export default function InfoPanel({
       console.log('No data available for AQI calculation');
       setAqiData(null);
     }
-  }, [data?.nearbyStationsData, sensorData, data?.tempoData]);
+  }, [data?.nearbyStationsData, sensorData, data?.tempoData, data?.loadingNearbyData, data?.loadingTempoData, loading]);
 
   // 獲取機器學習預測數據
   const fetchMlPrediction = async (stationId) => {
@@ -877,7 +901,7 @@ export default function InfoPanel({
                     Latitude
                   </Typography>
                   <Typography variant="body2">
-                    {data.lat.toFixed(5)}
+                    {data.lat && typeof data.lat === 'number' ? data.lat.toFixed(5) : 'N/A'}
                   </Typography>
                 </Grid>
                 <Grid size={3}>
@@ -885,7 +909,7 @@ export default function InfoPanel({
                     Longitude
                   </Typography>
                   <Typography variant="body2">
-                    {data.lng.toFixed(5)}
+                    {data.lng && typeof data.lng === 'number' ? data.lng.toFixed(5) : 'N/A'}
                   </Typography>
                 </Grid>
               </Grid>
@@ -941,7 +965,7 @@ export default function InfoPanel({
             )}
 
             {/* ML Prediction 顯示 - 只在有數據或正在載入時顯示 */}
-            {(mlPredictionLoading || mlPrediction) && (
+            {(mlPredictionLoading || (mlPrediction && mlPrediction.result?.AQI !== undefined && mlPrediction.result?.AQI !== null)) && (
               <Box sx={{ mb: 3 }}>
                 <Typography variant="caption" color="text.secondary">
                   ML Predicted AQI (Next Hour)
@@ -960,21 +984,21 @@ export default function InfoPanel({
                       Predicting...
                     </Typography>
                   </Paper>
-                ) : mlPrediction ? (
+                ) : mlPrediction && mlPrediction.result?.AQI !== undefined && mlPrediction.result?.AQI !== null ? (
                   <Paper 
                     sx={{ 
                       p: 1.5, 
-                      backgroundColor: getAQIInfo(mlPrediction.result?.AQI || 0).color,
-                      color: getAQIInfo(mlPrediction.result?.AQI || 0).textColor,
+                      backgroundColor: getAQIInfo(mlPrediction.result.AQI).color,
+                      color: getAQIInfo(mlPrediction.result.AQI).textColor,
                       textAlign: 'center',
                       mt: 0.5
                     }}
                   >
                     <Typography variant="h4" fontWeight="bold">
-                      {mlPrediction.result?.AQI || 0}
+                      {mlPrediction.result.AQI}
                     </Typography>
                     <Typography variant="body2" fontWeight="600">
-                      {getAQIInfo(mlPrediction.result?.AQI || 0).level}
+                      {getAQIInfo(mlPrediction.result.AQI).level}
                     </Typography>
                     <Typography variant="caption" sx={{ opacity: 0.8 }}>
                       Dominant: {mlPrediction.result?.Dominant?.toUpperCase() || 'N/A'}

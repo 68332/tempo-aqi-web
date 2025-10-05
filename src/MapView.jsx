@@ -8,9 +8,19 @@ import { getAssetPath } from './lib/constants.js';
 // US border geo json from: https://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_040_00_500k.json
 // exclude: Alaska, Hawaii, Puerto Rico
 
-export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpenAQLayer, showPandoraLayer, currentZoom, onZoomChange, mapRef }) {
-  // 管理標記狀態和地圖引用
-  const [clickMarker, setClickMarker] = React.useState(null);
+export default function MapView({ 
+  onSelect, 
+  resetToHome, 
+  showTempoLayer, 
+  showOpenAQLayer, 
+  showPandoraLayer, 
+  currentZoom, 
+  onZoomChange, 
+  mapRef,
+  clickMarker,
+  setClickMarker
+}) {
+  // 管理地圖引用
   const internalMapRef = React.useRef(null);
   
   // 動畫狀態
@@ -584,7 +594,9 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
   React.useEffect(() => {
     if (resetToHome && actualMapRef.current) {
       // 清除點擊標記和圓圈
-      setClickMarker(null);
+      if (setClickMarker) {
+        setClickMarker(null);
+      }
       // 平滑飛行回到初始視角
       actualMapRef.current.flyTo({
         center: [initialViewState.longitude, initialViewState.latitude],
@@ -667,7 +679,9 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
     }
 
     // 設定紅色標記位置
-    setClickMarker({ lng, lat });
+    if (setClickMarker) {
+      setClickMarker({ lng, lat });
+    }
 
     // 不論點擊到什麼地方都要放大（僅限美國境內）
     if (actualMapRef.current) {
