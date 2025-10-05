@@ -1,0 +1,59 @@
+/* ML 站點動畫效果 */
+
+/* 脈衝動畫 - 從小到大再縮小 */
+@keyframes pulse-ripple {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+/* 主站點的呼吸動畫 */
+@keyframes pulse-main {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+}
+
+/* 為 MapLibre 圖層添加動畫 - 使用全域樣式 */
+.maplibregl-canvas-container {
+  position: relative;
+}
+
+/* 嘗試為特定圖層添加動畫 */
+[layer-id="ml-station-ripple-largest"] {
+  animation: pulse-ripple 4s infinite;
+}
+
+[layer-id="ml-station-ripple-large"] {
+  animation: pulse-ripple 3.5s infinite 0.5s;
+}
+
+[layer-id="ml-station-ripple-medium"] {
+  animation: pulse-ripple 3s infinite 1s;
+}
+
+[layer-id="ml-station-ripple-small"] {
+  animation: pulse-ripple 2.5s infinite 1.5s;
+}
+
+[layer-id="ml-station-main"] {
+  animation: pulse-main 2s infinite;
+}

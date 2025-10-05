@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { Map, Source, Layer } from '@vis.gl/react-maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import './ml-station-animation.css'; // 導入 ML 站點動畫樣式
 import { getAssetPath } from './lib/constants.js';
 
 // US border geo json from: https://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_040_00_500k.json
@@ -11,9 +12,36 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
   // 管理標記狀態和地圖引用
   const [clickMarker, setClickMarker] = React.useState(null);
   const internalMapRef = React.useRef(null);
+  
+  // 動畫狀態
+  const [animationTime, setAnimationTime] = React.useState(0);
 
   // 使用外部傳入的 mapRef 或內部的 ref
   const actualMapRef = mapRef || internalMapRef;
+
+  // 動畫循環
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setAnimationTime(prev => prev + 0.1);
+    }, 100); // 每100ms更新一次
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // 計算動畫數值
+  const getAnimatedOpacity = (phase, offset = 0) => {
+    const cycle = (animationTime + offset) % 3; // 3秒循環
+    if (cycle < 1.5) {
+      return Math.max(0.05, 0.4 - cycle * 0.2); // 從0.4降到0.1
+    } else {
+      return Math.max(0.05, (cycle - 1.5) * 0.2 + 0.1); // 從0.1升到0.4
+    }
+  };
+
+  const getAnimatedRadius = (baseSize, amplitude, offset = 0) => {
+    const cycle = (animationTime + offset) % 3;
+    return baseSize + Math.sin(cycle * 2 * Math.PI) * amplitude;
+  };
 
   // 添加地圖載入事件監聽器
   const handleMapLoad = () => {
@@ -627,13 +655,15 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
     const { lng, lat } = event.lngLat;
 
     const features = event.target.queryRenderedFeatures(event.point, {
-      layers: ['us-fill', 'openaq-us-stations-points', 'pandora-us-stations-points'] // 只查詢這兩個圖層, 
+      layers: ['us-fill', 'openaq-us-stations-points', 'ml-station-main', 'ml-station-center', 'pandora-us-stations-points'] // 加入所有可點擊的 ML 圖層
     });
 
     // 檢查是否點擊在美國境內（包括監測站或州區域）
     const isInUSA = features.some(f => 
       f.layer.id === 'us-fill' || 
       f.layer.id === 'openaq-us-stations-points' || 
+      f.layer.id === 'ml-station-main' ||
+      f.layer.id === 'ml-station-center' ||
       f.layer.id === 'pandora-us-stations-points'
     );
 
@@ -655,8 +685,12 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
       });
     }
 
-    // 優先檢查是否點擊到監測站
-    const stationFeature = features.find(f => f.layer.id === 'openaq-us-stations-points');
+    // 優先檢查是否點擊到監測站（包括一般站點和 ML 站點）
+    const stationFeature = features.find(f => 
+      f.layer.id === 'openaq-us-stations-points' || 
+      f.layer.id === 'ml-station-main' ||
+      f.layer.id === 'ml-station-center'
+    );
     if (stationFeature) {
       const { lng, lat } = event.lngLat;
       const stationName = stationFeature.properties.name;
@@ -842,10 +876,13 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
       {showOpenAQLayer && (
         <>
           <Source id="openaq-us-stations" type="geojson" data={getAssetPath("/data/openaq-us-stations.geojson")} />
+          
+          {/* 一般監測站 (排除 id 221) */}
           <Layer
             id="openaq-us-stations-points"
             type="circle"
             source="openaq-us-stations"
+            filter={["!=", ["get", "id"], 221]} // 排除 id 221
             paint={{
               "circle-radius": [
                 "interpolate",
@@ -859,6 +896,140 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
               "circle-stroke-color": "#FFFFFF",
               "circle-stroke-width": 1,
               "circle-opacity": 0.8
+            }}
+          />
+          
+          {/* 特殊站點 (id 221) - 最大外圈 */}
+          <Layer
+            id="ml-station-ripple-largest"
+            type="circle"
+            source="openaq-us-stations"
+            filter={["==", ["get", "id"], 221]}
+            paint={{
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                3, 40 + Math.sin(animationTime * 1.5) * 10,
+                8, 65 + Math.sin(animationTime * 1.5) * 15,
+                15, 90 + Math.sin(animationTime * 1.5) * 20
+              ],
+              "circle-color": "#EF4444",
+              "circle-opacity": Math.max(0.05, 0.15 + Math.sin(animationTime * 2) * 0.1),
+              "circle-stroke-width": 1,
+              "circle-stroke-color": "#EF4444",
+              "circle-stroke-opacity": Math.max(0.1, 0.25 + Math.sin(animationTime * 2) * 0.15)
+            }}
+          />
+          
+          {/* 特殊站點 (id 221) - 大外圈 */}
+          <Layer
+            id="ml-station-ripple-large"
+            type="circle"
+            source="openaq-us-stations"
+            filter={["==", ["get", "id"], 221]}
+            paint={{
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                3, 28 + Math.sin(animationTime * 1.8 + 1) * 8,
+                8, 45 + Math.sin(animationTime * 1.8 + 1) * 12,
+                15, 65 + Math.sin(animationTime * 1.8 + 1) * 15
+              ],
+              "circle-color": "#EF4444",
+              "circle-opacity": Math.max(0.08, 0.2 + Math.sin(animationTime * 2.2 + 1) * 0.12),
+              "circle-stroke-width": 1,
+              "circle-stroke-color": "#EF4444",
+              "circle-stroke-opacity": Math.max(0.15, 0.3 + Math.sin(animationTime * 2.2 + 1) * 0.15)
+            }}
+          />
+          
+          {/* 特殊站點 (id 221) - 中外圈 */}
+          <Layer
+            id="ml-station-ripple-medium"
+            type="circle"
+            source="openaq-us-stations"
+            filter={["==", ["get", "id"], 221]}
+            paint={{
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                3, 18 + Math.sin(animationTime * 2.1 + 2) * 6,
+                8, 30 + Math.sin(animationTime * 2.1 + 2) * 8,
+                15, 42 + Math.sin(animationTime * 2.1 + 2) * 12
+              ],
+              "circle-color": "#EF4444",
+              "circle-opacity": Math.max(0.1, 0.25 + Math.sin(animationTime * 2.5 + 2) * 0.15),
+              "circle-stroke-width": 2,
+              "circle-stroke-color": "#DC2626",
+              "circle-stroke-opacity": Math.max(0.2, 0.4 + Math.sin(animationTime * 2.5 + 2) * 0.2)
+            }}
+          />
+          
+          {/* 特殊站點 (id 221) - 小外圈 */}
+          <Layer
+            id="ml-station-ripple-small"
+            type="circle"
+            source="openaq-us-stations"
+            filter={["==", ["get", "id"], 221]}
+            paint={{
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                3, 10 + Math.sin(animationTime * 2.4 + 3) * 4,
+                8, 18 + Math.sin(animationTime * 2.4 + 3) * 6,
+                15, 25 + Math.sin(animationTime * 2.4 + 3) * 8
+              ],
+              "circle-color": "#EF4444",
+              "circle-opacity": Math.max(0.15, 0.3 + Math.sin(animationTime * 2.8 + 3) * 0.2),
+              "circle-stroke-width": 2,
+              "circle-stroke-color": "#DC2626",
+              "circle-stroke-opacity": Math.max(0.25, 0.45 + Math.sin(animationTime * 2.8 + 3) * 0.25)
+            }}
+          />
+          
+          {/* 特殊站點 (id 221) - 主要圓圈 */}
+          <Layer
+            id="ml-station-main"
+            type="circle"
+            source="openaq-us-stations"
+            filter={["==", ["get", "id"], 221]}
+            paint={{
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                3, 6 + Math.sin(animationTime * 3) * 1,
+                8, 10 + Math.sin(animationTime * 3) * 2,
+                15, 16 + Math.sin(animationTime * 3) * 3
+              ],
+              "circle-color": "#DC2626",
+              "circle-stroke-color": "#FFFFFF",
+              "circle-stroke-width": 3,
+              "circle-opacity": 0.8 + Math.sin(animationTime * 3) * 0.15
+            }}
+          />
+          
+          {/* 特殊站點 (id 221) - 中心高亮點 */}
+          <Layer
+            id="ml-station-center"
+            type="circle"
+            source="openaq-us-stations"
+            filter={["==", ["get", "id"], 221]}
+            paint={{
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                3, 3,
+                8, 4,
+                15, 6
+              ],
+              "circle-color": "#FFFFFF",
+              "circle-opacity": 0.95
             }}
           />
         </>
