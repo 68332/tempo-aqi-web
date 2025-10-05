@@ -4,6 +4,7 @@ import MapView from './MapView';
 import InfoPanel from './InfoPanel';
 import { getTEMPOValue } from './utils/tempoUtils.js';
 import { FEATURED_STATIONS, calculateAQI, getAQIInfo } from './utils/aqiUtils.js';
+import { getAssetPath } from './lib/constants.js';
 
 export default function App() {
   const [selection, setSelection] = React.useState(null);
@@ -38,7 +39,7 @@ export default function App() {
       
       try {
         console.log('📡 Fetching /data/openaq-us-stations.geojson...');
-        const response = await fetch('/data/openaq-us-stations.geojson');
+        const response = await fetch(getAssetPath('/data/openaq-us-stations.geojson'));
         
         console.log('📊 Response:', response.status, response.statusText);
         
@@ -142,7 +143,7 @@ export default function App() {
       const API_KEY = 'f842213920405091f23318ca1a7880636ac843b7cb81f8e3985c41b17deb19f2';
       
       // 首先載入 OpenAQ 站點的 GeoJSON 數據
-      const geojsonResponse = await fetch('/data/openaq-us-stations.geojson');
+      const geojsonResponse = await fetch(getAssetPath('/data/openaq-us-stations.geojson'));
       if (!geojsonResponse.ok) {
         throw new Error('Failed to load OpenAQ stations GeoJSON');
       }

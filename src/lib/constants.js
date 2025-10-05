@@ -4,8 +4,8 @@ export const middleOfUSA = [-100, 40];
 export const getBasePath = () => {
   const currentHost = window.location.hostname;
   // 如果在 GitHub Pages (github.io) 或路徑包含 tempo-aqi-web
-  if (currentHost.includes('github.io') || window.location.pathname.includes('/Aircast/')) {
-    return '/Aircast';
+  if (currentHost.includes('github.io') || window.location.pathname.includes('/tempo-aqi-web/')) {
+    return '/tempo-aqi-web';
   }
   return '';
 };
