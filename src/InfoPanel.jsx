@@ -273,17 +273,19 @@ export default function InfoPanel({
     if (data) {
       console.log('InfoPanel data changed:', { id: data.id, type: data.type }); // Debug
       
+      // 清空之前的 ML prediction
+      setMlPrediction(null);
+      setMlPredictionLoading(false);
+      
       // if data is from openaq
       if (data.type === 'openaq') {
         if (data && data.sensors && data.sensors.length > 0) {
           console.log('Fetching data for sensors:', data.sensors); // Debug
           fetchSensorData(data.sensors);
           
-          // 如果是站點 221，獲取機器學習預測
-          if (parseInt(data.id) === 221) {
-            console.log('Station 221 detected, fetching ML prediction'); // Debug
-            fetchMlPrediction(data.id);
-          }
+          // 為所有 OpenAQ 站點獲取機器學習預測
+          console.log('OpenAQ station detected, fetching ML prediction for station:', data.id); // Debug
+          fetchMlPrediction(data.id);
         } else {
           setSensorData([]);
         }
@@ -291,11 +293,9 @@ export default function InfoPanel({
       } else if (data.type === 'pandora') {
         fetchPandoraData(data);
         
-        // 如果是站點 221，獲取機器學習預測
-        if (parseInt(data.id) === 221) {
-          console.log('Station 221 detected (Pandora), fetching ML prediction'); // Debug
-          fetchMlPrediction(data.id);
-        }
+        // 為所有 Pandora 站點獲取機器學習預測
+        console.log('Pandora station detected, fetching ML prediction for station:', data.id); // Debug
+        fetchMlPrediction(data.id);
       }
     }
   }, [data]);
@@ -515,27 +515,22 @@ export default function InfoPanel({
   const fetchMlPrediction = async (stationId) => {
     console.log('fetchMlPrediction called with stationId:', stationId, 'type:', typeof stationId);
     
-    // 支援字串和數字格式的 ID 比較
-    const id = parseInt(stationId);
-    
-    if (id !== 221) {
-      console.log('Not station 221, skipping ML prediction. Station ID:', stationId, 'Parsed:', id);
-      return;
-    }
-    
     setMlPredictionLoading(true);
     
-    console.log('Fetching ML prediction for station 221');
+    console.log('Fetching ML prediction for station:', stationId);
     try {
       const response = await fetch(`https://aircast-cors-proxy.aircast68332.workers.dev/api/ml/predict_aqi?station_id=${stationId}`);
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // 如果是 404 或其他錯誤，說明該站點不支援 ML 預測，靜默處理
+        console.log(`ML prediction not available for station ${stationId} (status: ${response.status})`);
+        setMlPrediction(null);
+        return;
       }
       const data = await response.json();
       console.log('ML prediction response:', data);
       setMlPrediction(data);
     } catch (error) {
-      console.error('Error fetching ML prediction:', error);
+      console.log('ML prediction not available for station:', stationId, 'Error:', error.message);
       setMlPrediction(null);
     } finally {
       setMlPredictionLoading(false);
@@ -773,6 +768,8 @@ export default function InfoPanel({
         }}
         onClick={() => {
           // 清除選中的資料，回到首頁狀態
+          setMlPrediction(null);
+          setMlPredictionLoading(false);
           if (onClose) {
             onClose();
           }
@@ -943,8 +940,8 @@ export default function InfoPanel({
               </Box>
             )}
 
-            {/* ML Prediction 顯示 - 只對站點 221 顯示 */}
-            {parseInt(data?.id) === 221 && (
+            {/* ML Prediction 顯示 - 只在有數據或正在載入時顯示 */}
+            {(mlPredictionLoading || mlPrediction) && (
               <Box sx={{ mb: 3 }}>
                 <Typography variant="caption" color="text.secondary">
                   ML Predicted AQI (Next Hour)
