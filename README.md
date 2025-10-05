@@ -18,9 +18,96 @@
 
 ## Project Structure
 
+```
+.
+├── eslint.config.js
+├── image-3.png
+├── index.html
+├── LICENSE
+├── package-lock.json
+├── package.json
+├── public
+│   ├── aircast.svg
+│   ├── data
+│   │   ├── openaq-us-stations.geojson
+│   │   ├── pandora-stations.geojson
+│   │   ├── pandora-us-stations.geojson
+│   │   ├── TOLnet-us-stations.geojson
+│   │   ├── us-states.geojson
+│   │   └── world-mask.geojson
+│   └── tempo
+│       ├── geotiff
+│       ├── no2
+│       └── tiles
+├── README.md
+├── scripts
+│   ├── fetch_openaq_us_stations.py
+│   ├── fetch_pandora_us_stations.py
+│   ├── fetch_tempo_no2.py
+│   ├── fetch_TOLNet_us_stations.py
+│   └── requirements.txt
+├── src
+│   ├── App.jsx
+│   ├── InfoPanel.jsx
+│   ├── lib
+│   │   └── constants.js
+│   ├── main.jsx
+│   └── MapView.jsx
+└── vite.config.js
+```
+
+
 ## Deployment
 
+### Website 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit%20Site-blue?style=flat-square&logo=github)](https://68332.github.io/Aircast/)
+
+```bash
+# Install dependencies
+npm install
+
+# Build the project
+npm run dev
+➜  Local:   http://localhost:5173/
+```
+
+### Fetch TEMPO Data
+
+```bash
+cd scripts
+
+# Install Python dependencies
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Set up NASA Earthdata credentials (create .env file in project root)
+# EARTHDATA_USERNAME=your_username
+# EARTHDATA_PASSWORD=your_password
+
+# Fetch latest TEMPO_NO2_L3_NRT_V02.nc data then transform to raster tiles format to display on the map
+python fetch_tempo_no2.py
+# Raster tiles images will be stored under /public/tempo/tiles
+```
+
 ## References
+* Challenge Resource - https://www.spaceappschallenge.org/2025/challenges/from-earthdata-to-action-cloud-computing-with-earth-observation-data-for-predicting-cleaner-safer-skies/?tab=resources
+* AQI Documentent - [Technical Assistance Document for the Reporting of Daily Air Quality – the Air Quality Index (AQI) (U.S. Environmental Protection Agency )](https://document.airnow.gov/technical-assistance-document-for-the-reporting-of-daily-air-quailty.pdf)
+* AQI Wikipedia - https://en.wikipedia.org/wiki/Air_quality_index
+* Comprehensive Analysis of Bias in TEMPO NO2 Column Densities Through Pandora Observations - https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2025JD044150
+* AOD-Hybrid-Paper - https://github.com/p3jitnath/AOD-Hybrid-Paper
+* AQI LSTM model - https://github.com/vishnukanduri/Air-quality-index-prediction-using-LSTM
+* openaq - https://openaq.medium.com/where-does-openaq-data-come-from-a5cf9f3a5c85
+* openaq api doc - https://api.openaq.org
+* NASA TEMPO data - https://asdc.larc.nasa.gov/project/TEMPO
+* TEMPO_NO2_L3_NRT_V02 collection dataset - https://asdc.larc.nasa.gov/project/TEMPO/TEMPO_NO2_L3_NRT_V02
+* NASA CMR Search api doc - https://cmr.earthdata.nasa.gov/search/site/docs/search/api.html
+* NASA Pandora - https://pandora.gsfc.nasa.gov
+* Maplibre - [MapLibre](https://maplibre.org) is an open-source WebGL map rendering library that lets you display and style interactive maps using vector tiles.
+* react-maplibre - [react-maplibre](https://visgl.github.io/react-maplibre/docs/get-started) is a React wrapper around MapLibre, providing declarative components to build interactive maps easily in React applications.
+* OpenFreeMap - [OpenFreeMap](https://openfreemap.org) is a free and open platform that provides vector tiles and map styles based on OpenStreetMap, offering an open alternative to commercial map APIs. (Provide vector tiles server with no usage limit. )
+* US border geo json file - https://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_040_00_500k.json
+* MUI - Material UI - https://mui.com
 
 ## License
 
