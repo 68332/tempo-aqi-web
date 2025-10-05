@@ -16,6 +16,23 @@
 
 ## Introduction
 
+Aircast is our submission for the **NASA Space Apps Challenge 2025**, addressing the ["From EarthData to Action: Cloud Computing with Earth Observation Data for Predicting Cleaner, Safer Skies"](https://www.spaceappschallenge.org/2025/challenges/from-earthdata-to-action-cloud-computing-with-earth-observation-data-for-predicting-cleaner-safer-skies/) challenge.
+
+This web-based application provides unified visualization of air quality data across **North America** by combining:
+
+* **NASA TEMPO Satellite Observations** - Near-Real-time atmospheric NO₂ measurements from space covering North America
+* **Ground-based Monitoring Networks** - Air quality data from OpenAQ and Pandora stations across the United States
+* **Machine Learning Predictions** - LSTM model for forecasting Air Quality Index (AQI) at specific monitoring stations
+
+### Key Features
+- **Real-time Data Integration**: Seamlessly combines satellite and ground-based air quality measurements
+- **Interactive Visualization**: Web-based map interface for exploring air pollution patterns
+- **Predictive Analytics**: ML AQI forecasting for enhanced decision-making
+- **Automated Data Pipeline**: GitHub Actions workflow for continuous TEMPO satellite data updates
+
+The platform transforms complex Earth observation data into actionable insights, supporting public health monitoring, environmental research, and policy-making decisions for cleaner, safer skies.
+
+
 ## Project Structure
 
 ```
@@ -88,24 +105,25 @@ pip install -r requirements.txt
 python fetch_tempo_no2.py
 # Raster tiles images will be stored under /public/tempo/tiles
 ```
+## Data Sources
+* NASA Pandora - https://pandora.gsfc.nasa.gov
+* NASA TEMPO data - https://asdc.larc.nasa.gov/project/TEMPO
+* TEMPO_NO2_L3_NRT_V02 collection dataset - https://asdc.larc.nasa.gov/project/TEMPO/TEMPO_NO2_L3_NRT_V02
+* openaq - https://openaq.medium.com/where-does-openaq-data-come-from-a5cf9f3a5c85
+* US border geo json file - https://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_040_00_500k.json
 
 ## References
-* Challenge Resource - https://www.spaceappschallenge.org/2025/challenges/from-earthdata-to-action-cloud-computing-with-earth-observation-data-for-predicting-cleaner-safer-skies/?tab=resources
+* NASA Space Apps Challenge Resource - https://www.spaceappschallenge.org/2025/challenges/from-earthdata-to-action-cloud-computing-with-earth-observation-data-for-predicting-cleaner-safer-skies/?tab=resources
 * AQI Documentent - [Technical Assistance Document for the Reporting of Daily Air Quality – the Air Quality Index (AQI) (U.S. Environmental Protection Agency )](https://document.airnow.gov/technical-assistance-document-for-the-reporting-of-daily-air-quailty.pdf)
 * AQI Wikipedia - https://en.wikipedia.org/wiki/Air_quality_index
 * Comprehensive Analysis of Bias in TEMPO NO2 Column Densities Through Pandora Observations - https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2025JD044150
 * AOD-Hybrid-Paper - https://github.com/p3jitnath/AOD-Hybrid-Paper
 * AQI LSTM model - https://github.com/vishnukanduri/Air-quality-index-prediction-using-LSTM
-* openaq - https://openaq.medium.com/where-does-openaq-data-come-from-a5cf9f3a5c85
-* openaq api doc - https://api.openaq.org
-* NASA TEMPO data - https://asdc.larc.nasa.gov/project/TEMPO
-* TEMPO_NO2_L3_NRT_V02 collection dataset - https://asdc.larc.nasa.gov/project/TEMPO/TEMPO_NO2_L3_NRT_V02
 * NASA CMR Search api doc - https://cmr.earthdata.nasa.gov/search/site/docs/search/api.html
-* NASA Pandora - https://pandora.gsfc.nasa.gov
+* openaq api doc - https://api.openaq.org
 * Maplibre - [MapLibre](https://maplibre.org) is an open-source WebGL map rendering library that lets you display and style interactive maps using vector tiles.
 * react-maplibre - [react-maplibre](https://visgl.github.io/react-maplibre/docs/get-started) is a React wrapper around MapLibre, providing declarative components to build interactive maps easily in React applications.
 * OpenFreeMap - [OpenFreeMap](https://openfreemap.org) is a free and open platform that provides vector tiles and map styles based on OpenStreetMap, offering an open alternative to commercial map APIs. (Provide vector tiles server with no usage limit. )
-* US border geo json file - https://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_040_00_500k.json
 * MUI - Material UI - https://mui.com
 
 ## License
