@@ -14,8 +14,6 @@
 
 </div>
 
-## Introduction
-
 Aircast is our submission for the **NASA Space Apps Challenge 2025**, addressing the ["From EarthData to Action: Cloud Computing with Earth Observation Data for Predicting Cleaner, Safer Skies"](https://www.spaceappschallenge.org/2025/challenges/from-earthdata-to-action-cloud-computing-with-earth-observation-data-for-predicting-cleaner-safer-skies/) challenge.
 
 This web-based application provides unified visualization of air quality data across **North America** by combining:
@@ -25,10 +23,12 @@ This web-based application provides unified visualization of air quality data ac
 * **Machine Learning Predictions** - LSTM model for forecasting Air Quality Index (AQI) at specific monitoring stations
 
 ### Key Features
-- **Real-time Data Integration**: Seamlessly combines satellite and ground-based air quality measurements
-- **Interactive Visualization**: Web-based map interface for exploring air pollution patterns
-- **Predictive Analytics**: ML AQI forecasting for enhanced decision-making
-- **Automated Data Pipeline**: GitHub Actions workflow for continuous TEMPO satellite data updates
+- Display and integrate data from diverse sources
+- Near real-time TEMPO data (NO2)
+- Ground-based air quality measurements (e.g., Pandora, OpenAQ)
+- Compare satellite data with ground station data for validation purposes in real time
+- Generate forecasts of local air quality (Certain fixed station)
+- Visualize complex information clearly to users
 
 The platform transforms complex Earth observation data into actionable insights, supporting public health monitoring, environmental research, and policy-making decisions for cleaner, safer skies.
 

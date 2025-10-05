@@ -1,0 +1,6 @@
+name = "aircast-cors-proxy"
+main = "worker.js"
+compatibility_date = "2024-10-01"
+
+[env.production]
+name = "aircast-cors-proxy"

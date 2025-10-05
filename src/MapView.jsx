@@ -375,11 +375,8 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
           const paramName = sensor.parameter_name?.toLowerCase();
           if (targetParameters.includes(paramName)) {
             try {
-              // 檢查是否在開發環境（有 proxy）還是生產環境
-              const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-              const apiUrl = isDevelopment 
-                ? `/api/openaq/v3/sensors/${sensor.id}` // 開發環境使用 proxy
-                : `https://cors-anywhere.herokuapp.com/https://api.openaq.org/v3/sensors/${sensor.id}`; // 生產環境使用 CORS Anywhere
+              // 使用 Cloudflare Worker 來避免 CORS 問題
+              const apiUrl = `https://aircast-cors-proxy.aircast68332.workers.dev/api/openaq/v3/sensors/${sensor.id}`;
               
               const response = await fetch(apiUrl, {
                 headers: {
@@ -477,11 +474,8 @@ export default function MapView({ onSelect, resetToHome, showTempoLayer, showOpe
         console.log(`Processing Pandora station: ${stationName} (${instrument})`);
         
         try {
-          // 檢查是否在開發環境（有 proxy）還是生產環境
-          const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-          const pandoraApiUrl = isDevelopment 
-            ? `/api/pandora/${stationName}/${instrument}/L2/${instrument}_${stationName}_L2_rnvh3p1-8.txt` // 開發環境使用 proxy
-            : `https://cors-anywhere.herokuapp.com/https://data.hetzner.pandonia-global-network.org/${stationName}/${instrument}/L2/${instrument}_${stationName}_L2_rnvh3p1-8.txt`; // 生產環境使用 CORS Anywhere
+          // 使用 Cloudflare Worker 來避免 CORS 問題
+          const pandoraApiUrl = `https://aircast-cors-proxy.aircast68332.workers.dev/api/pandora/${stationName}/${instrument}/L2/${instrument}_${stationName}_L2_rnvh3p1-8.txt`;
 
           console.log(`Fetching Pandora data from: ${pandoraApiUrl}`);
           const response = await fetch(pandoraApiUrl);

@@ -527,7 +527,7 @@ export default function InfoPanel({
     
     console.log('Fetching ML prediction for station 221');
     try {
-      const response = await fetch(`/api/ml/predict_aqi?station_id=${stationId}`);
+      const response = await fetch(`https://aircast-cors-proxy.aircast68332.workers.dev/api/ml/predict_aqi?station_id=${stationId}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -598,13 +598,10 @@ export default function InfoPanel({
 
       const promises = limitedSensors.map(async (sensor) => {
         try {
-          // 檢查是否在開發環境（有 proxy）還是生產環境
-          const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-          const apiUrl = isDevelopment 
-            ? `/api/openaq/v3/sensors/${sensor.id}` // 開發環境使用 proxy
-            : `https://cors-anywhere.herokuapp.com/https://api.openaq.org/v3/sensors/${sensor.id}`; // 生產環境使用 CORS Anywhere
+          // 使用 Cloudflare Worker 代理所有 API 請求
+          const apiUrl = `https://aircast-cors-proxy.aircast68332.workers.dev/api/openaq/v3/sensors/${sensor.id}`;
           
-          // 使用動態 URL 來避免 CORS 問題
+          // 使用 Cloudflare Worker 來避免 CORS 問題
           const response = await fetch(apiUrl, {
             headers: {
               'x-api-key': API_KEY  // 改用小寫的 header 名稱
@@ -668,13 +665,10 @@ export default function InfoPanel({
   const fetchPandoraData = async (data) => {
     setLoading(true);
     try {
-      // 檢查是否在開發環境（有 proxy）還是生產環境
-      const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const pandoraApiUrl = isDevelopment 
-        ? `/api/pandora/${data.stationName}/${data.instrument}/L2/${data.instrument}_${data.stationName}_L2_rnvh3p1-8.txt` // 開發環境使用 proxy
-        : `https://cors-anywhere.herokuapp.com/https://data.hetzner.pandonia-global-network.org/${data.stationName}/${data.instrument}/L2/${data.instrument}_${data.stationName}_L2_rnvh3p1-8.txt`; // 生產環境使用 CORS Anywhere
+      // 使用 Cloudflare Worker 代理所有 API 請求
+      const pandoraApiUrl = `https://aircast-cors-proxy.aircast68332.workers.dev/api/pandora/${data.stationName}/${data.instrument}/L2/${data.instrument}_${data.stationName}_L2_rnvh3p1-8.txt`;
       
-      // use proxy to avoid CORS issue
+      // use Cloudflare Worker to avoid CORS issue
       const response = await fetch(pandoraApiUrl);
       if (response.ok) {
         const text = await response.text();
