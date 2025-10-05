@@ -1145,7 +1145,50 @@ export default function App() {
           whiteSpace: 'nowrap'
         }}
       >
-        AirCast | 68332@Taichung NASA Hackathon 2025
+        <a 
+          href="https://github.com/68332/Aircast" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          style={{
+            color: '#374151',
+            textDecoration: 'none',
+            fontWeight: '500'
+          }}
+          onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
+          onMouseOut={(e) => e.target.style.textDecoration = 'none'}
+        >
+          AirCast
+        </a>
+        {' | '}
+        <a 
+          href="https://github.com/orgs/68332/people" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          style={{
+            color: '#374151',
+            textDecoration: 'none',
+            fontWeight: '500'
+          }}
+          onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
+          onMouseOut={(e) => e.target.style.textDecoration = 'none'}
+        >
+          68332
+        </a>
+        {'@'}
+        <a 
+          href="https://www.spaceappschallenge.org/2025/find-a-team/68332/?tab=project" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          style={{
+            color: '#374151',
+            textDecoration: 'none',
+            fontWeight: '500'
+          }}
+          onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
+          onMouseOut={(e) => e.target.style.textDecoration = 'none'}
+        >
+          Kaohsiung NASA Hackathon 2025
+        </a>
       </div>
 
       {/* Zoom Slider */}

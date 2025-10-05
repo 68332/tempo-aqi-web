@@ -33,9 +33,7 @@ This web-based application provides unified visualization of air quality data ac
 The platform transforms complex Earth observation data into actionable insights, supporting public health monitoring, environmental research, and policy-making decisions for cleaner, safer skies.
 
 
-## Project Structure
-
-### System Architecture
+## Project Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -110,6 +108,9 @@ pip install -r requirements.txt
 python fetch_tempo_no2.py
 # Raster tiles images will be stored under /public/tempo/tiles
 ```
+### Model
+* Model Repository - https://github.com/68332/tempo-aqi-model
+
 ## Data Sources
 * NASA Pandora - https://pandora.gsfc.nasa.gov
 * NASA TEMPO data - https://asdc.larc.nasa.gov/project/TEMPO
