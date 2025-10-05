@@ -873,7 +873,7 @@ export default function InfoPanel({
           <Box>
             <Box sx={{ mb: 2 }}>
               <Grid container spacing={2} sx={{ mb: 1 }}>
-                <Grid size={4}>
+                <Grid size={6}>
                   <Typography variant="caption" color="text.secondary">
                     {data.isStation ? 'Station' : 'State'}
                   </Typography>
@@ -881,7 +881,7 @@ export default function InfoPanel({
                     {data.isStation ? data.stationName : data.stateName}
                   </Typography>
                 </Grid>
-                <Grid size={4}>
+                <Grid size={3}>
                   <Typography variant="caption" color="text.secondary">
                     Latitude
                   </Typography>
@@ -889,7 +889,7 @@ export default function InfoPanel({
                     {data.lat.toFixed(5)}
                   </Typography>
                 </Grid>
-                <Grid size={4}>
+                <Grid size={3}>
                   <Typography variant="caption" color="text.secondary">
                     Longitude
                   </Typography>
