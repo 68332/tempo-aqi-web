@@ -854,6 +854,108 @@ export default function InfoPanel({
       <Box sx={{ p: 2, flexGrow: 1, overflowY: 'auto' }}>
         {!data ? (
           <Box>
+            {/* 搜尋提示 */}
+            <Typography variant="h6" fontWeight="600" sx={{ mb: 2, color: 'primary.main' }}>
+              Search or click on map to get real-time air quality
+            </Typography>
+            
+            {/* 重要城市AQI */}
+            <Typography variant="subtitle2" fontWeight="600" sx={{ mb: 1 }}>
+              Major Cities Air Quality
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Real-time AQI from key monitoring stations:
+            </Typography>
+            
+            {isLoadingFeaturedStations ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : (
+              <Box sx={{ mb: 3 }}>
+                {featuredStationsData && featuredStationsData.length > 0 ? (
+                  featuredStationsData.map((station, index) => {
+                    // 從站點名稱提取城市名稱
+                    const getCityName = (stationName) => {
+                      const cityMappings = {
+                        'McMillan Reservoir': 'Washington DC',
+                        'Houston Deer Park C3': 'Houston',
+                        'Grand Rapids': 'Grand Rapids',
+                        'Denver - CAMP': 'Denver',
+                        'Seattle-Beacon Hill': 'Seattle',
+                        'Phoenix JLG Supersit': 'Phoenix',
+                        'Boston - Roxbury': 'Boston',
+                        'Indpls-Washington Pa': 'Indianapolis',
+                        'Los Angeles - N. Mai': 'Los Angeles',
+                        'Oakland West': 'San Francisco Bay Area'
+                      };
+                      return cityMappings[stationName] || stationName;
+                    };
+
+                    return (
+                      <Box
+                        key={station.id}
+                        sx={{
+                          border: '1px solid',
+                          borderColor: station.aqiColor || '#e0e0e0',
+                          borderRadius: 2,
+                          p: 2,
+                          mb: 1,
+                          cursor: 'pointer',
+                          backgroundColor: 'background.paper',
+                          '&:hover': {
+                            backgroundColor: 'action.hover',
+                            transform: 'translateY(-1px)',
+                            boxShadow: 1
+                          },
+                          transition: 'all 0.2s ease-in-out'
+                        }}
+                        onClick={() => onFlyToStation && onFlyToStation(station)}
+                      >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography variant="subtitle2" fontWeight="600">
+                            {getCityName(station.actualName || station.name)}
+                          </Typography>
+                          {station.aqi !== null ? (
+                            <Chip
+                              label={`AQI ${station.aqi}`}
+                              size="small"
+                              sx={{
+                                backgroundColor: station.aqiColor,
+                                color: station.aqiColor === '#FFFF00' ? '#000000' : '#FFFFFF',
+                                fontWeight: 'bold',
+                                fontSize: '0.75rem'
+                              }}
+                            />
+                          ) : (
+                            <Chip
+                              label="Loading..."
+                              size="small"
+                              sx={{
+                                backgroundColor: '#grey.300',
+                                color: 'text.secondary',
+                                fontSize: '0.75rem'
+                              }}
+                            />
+                          )}
+                        </Box>
+                        {station.aqi !== null && (
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                            {station.aqiLevel} • {station.measurements?.length || 0} sensors
+                          </Typography>
+                        )}
+                      </Box>
+                    );
+                  })
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    Loading major cities data...
+                  </Typography>
+                )}
+              </Box>
+            )}
+            
+            {/* 應用程式簡介 */}
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               AirCast is a web-based platform that forecasts and visualizes air quality across the United States. By combining satellite observations, ground-based measurements, and atmospheric networks, AirCast provides a unified view of air pollution to support public health and decision-making.
             </Typography>
@@ -882,83 +984,6 @@ export default function InfoPanel({
                 • <strong>Pandora</strong> - Atmospheric composition measurement stations
               </Typography>
             </Box>
-            
-            {/* Featured Monitoring Stations */}
-            <Typography variant="subtitle2" fontWeight="600" sx={{ mb: 1 }}>
-              Featured Monitoring Stations
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Key air quality monitoring locations with comprehensive sensor coverage:
-            </Typography>
-            
-            {isLoadingFeaturedStations ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-                <CircularProgress size={24} />
-              </Box>
-            ) : (
-              <Box sx={{ mb: 2 }}>
-                {featuredStationsData && featuredStationsData.length > 0 ? (
-                  featuredStationsData.map((station, index) => (
-                    <Box
-                      key={station.id}
-                      sx={{
-                        border: '1px solid',
-                        borderColor: station.aqiColor || '#e0e0e0',
-                        borderRadius: 2,
-                        p: 2,
-                        mb: 1,
-                        cursor: 'pointer',
-                        backgroundColor: 'background.paper',
-                        '&:hover': {
-                          backgroundColor: 'action.hover',
-                          transform: 'translateY(-1px)',
-                          boxShadow: 1
-                        },
-                        transition: 'all 0.2s ease-in-out'
-                      }}
-                      onClick={() => onFlyToStation && onFlyToStation(station)}
-                    >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                        <Typography variant="subtitle2" fontWeight="600">
-                          {station.actualName || station.name}
-                        </Typography>
-                        {station.aqi !== null && (
-                          <Chip
-                            label={`AQI ${station.aqi}`}
-                            size="small"
-                            sx={{
-                              backgroundColor: station.aqiColor,
-                              color: station.aqiColor === '#FFFF00' ? '#000000' : '#FFFFFF',
-                              fontWeight: 'bold',
-                              fontSize: '0.75rem'
-                            }}
-                          />
-                        )}
-                      </Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                        ID: {station.id}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {station.coordinates[1].toFixed(3)}, {station.coordinates[0].toFixed(3)}
-                      </Typography>
-                      {station.aqi !== null && (
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                          {station.aqiLevel} • {station.measurements?.length || 0} sensors active
-                        </Typography>
-                      )}
-                    </Box>
-                  ))
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No featured stations available
-                  </Typography>
-                )}
-              </Box>
-            )}
-            
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Click anywhere on the map to explore local air quality data from monitoring stations.
-            </Typography>
           </Box>
         ) : (
           <Box>
