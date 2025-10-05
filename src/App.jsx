@@ -3,6 +3,7 @@ import * as React from 'react';
 import MapView from './MapView';
 import InfoPanel from './InfoPanel';
 import { getTEMPOValue } from './utils/tempoUtils.js';
+import { FEATURED_STATIONS, calculateAQI, getAQIInfo } from './utils/aqiUtils.js';
 
 export default function App() {
   const [selection, setSelection] = React.useState(null);
@@ -17,6 +18,10 @@ export default function App() {
   const [searchInputFocused, setSearchInputFocused] = React.useState(false);
   const [clickMarker, setClickMarker] = React.useState(null); // 添加點擊標記狀態
   const mapRef = React.useRef(null);
+  
+  // 重要站點狀態
+  const [featuredStationsData, setFeaturedStationsData] = React.useState([]);
+  const [isLoadingFeaturedStations, setIsLoadingFeaturedStations] = React.useState(false);
   
   // 圖層顯示控制狀態
   const [showTempoLayer, setShowTempoLayer] = React.useState(true); // 控制 TEMPO NO2 圖層顯示
@@ -112,6 +117,9 @@ export default function App() {
         setOpenaqStations(stations);
         console.log(`📊 Loaded ${stations.length} OpenAQ stations successfully!`);
         console.log('Sample stations:', stations.slice(0, 3));
+        
+        // 載入完 OpenAQ 站點後，載入精選監測站數據
+        loadFeaturedStationsData();
       } catch (error) {
         console.error('❌ Failed to load OpenAQ stations:', error);
         console.error('Error details:', error.message, error.stack);
@@ -124,7 +132,171 @@ export default function App() {
     loadOpenAQStations();
   }, []);
 
-  // 搜尋邏輯
+  // 載入精選監測站數據
+  const loadFeaturedStationsData = async () => {
+    try {
+      console.log('Loading featured stations data...');
+      
+      // OpenAQ API Key
+      const API_KEY = 'f842213920405091f23318ca1a7880636ac843b7cb81f8e3985c41b17deb19f2';
+      
+      // 首先載入 OpenAQ 站點的 GeoJSON 數據
+      const geojsonResponse = await fetch('/data/openaq-us-stations.geojson');
+      if (!geojsonResponse.ok) {
+        throw new Error('Failed to load OpenAQ stations GeoJSON');
+      }
+      const geojsonData = await geojsonResponse.json();
+      
+      const updatedStations = [];
+
+      for (const station of FEATURED_STATIONS) {
+        try {
+          console.log(`Processing featured station: ${station.name}`);
+          
+          // 在 GeoJSON 中尋找匹配的站點（根據位置）
+          const matchingFeature = geojsonData.features.find(feature => {
+            const [lng, lat] = feature.geometry.coordinates;
+            const [stationLng, stationLat] = station.coordinates; // coordinates 是 [lng, lat] 格式
+            const distance = Math.sqrt(
+              Math.pow(lat - stationLat, 2) + Math.pow(lng - stationLng, 2)
+            );
+            return distance < 0.01; // 允許一些位置誤差
+          });
+
+          if (matchingFeature) {
+            console.log(`Found matching station in GeoJSON for ${station.name}:`, matchingFeature.properties.name);
+            
+            let sensors = matchingFeature.properties.sensors || [];
+            
+            // 確保 sensors 是陣列
+            if (typeof sensors === 'string') {
+              try {
+                sensors = JSON.parse(sensors);
+              } catch (error) {
+                console.error('Failed to parse sensors:', error);
+                sensors = [];
+              }
+            }
+
+            // 獲取最新的 sensor 數據
+            const measurements = [];
+            console.log(`Station ${station.name} has ${sensors.length} sensors:`, sensors.map(s => s.parameter_name));
+            
+            for (const sensor of sensors) {
+              try {
+                const apiUrl = `https://aircast-cors-proxy.aircast68332.workers.dev/api/openaq/v3/sensors/${sensor.id}`;
+                const sensorResponse = await fetch(apiUrl, {
+                  headers: {
+                    'x-api-key': API_KEY
+                  }
+                });
+                
+                if (sensorResponse.ok) {
+                  const sensorData = await sensorResponse.json();
+                  if (sensorData.results && sensorData.results.length > 0) {
+                    const result = sensorData.results[0];
+                    if (result.latest && result.latest.value !== null) {
+                      measurements.push({
+                        parameter: sensor.parameter_name,
+                        value: result.latest.value,
+                        unit: sensor.parameter_units,
+                        lastUpdated: result.latest.datetime
+                      });
+                      console.log(`✅ Got data for ${sensor.parameter_name}: ${result.latest.value} ${sensor.parameter_units}`);
+                    } else {
+                      console.warn(`❌ No latest value for sensor ${sensor.id} (${sensor.parameter_name})`);
+                    }
+                  } else {
+                    console.warn(`❌ No results for sensor ${sensor.id} (${sensor.parameter_name})`);
+                  }
+                } else {
+                  console.warn(`❌ Failed to fetch sensor ${sensor.id}: ${sensorResponse.status} ${sensorResponse.statusText}`);
+                }
+              } catch (error) {
+                console.warn(`❌ Failed to fetch sensor ${sensor.id} data:`, error);
+              }
+            }
+            
+            console.log(`Station ${station.name} measurements:`, measurements);
+            
+            // 將 measurements 轉換為 calculateAQI 期望的格式
+            const pollutants = {};
+            measurements.forEach(measurement => {
+              const param = measurement.parameter.toLowerCase();
+              if (!pollutants[param]) {
+                pollutants[param] = { values: [], max: null };
+              }
+              pollutants[param].values.push(measurement.value);
+              if (pollutants[param].max === null || measurement.value > pollutants[param].max) {
+                pollutants[param].max = measurement.value;
+              }
+            });
+            
+            console.log(`Station ${station.name} pollutants for AQI calculation:`, pollutants);
+            
+            // 計算 AQI
+            const aqiResult = calculateAQI(pollutants);
+            let aqi, level, color;
+            
+            if (aqiResult && aqiResult.aqi !== null) {
+              aqi = aqiResult.aqi;
+              const aqiInfo = getAQIInfo(aqi);
+              level = aqiInfo.level;
+              color = aqiInfo.color;
+            } else {
+              // 如果無法計算 AQI，設定預設值
+              aqi = null;
+              level = 'Unknown';
+              color = '#999999';
+              console.warn(`Unable to calculate AQI for station: ${station.name}, pollutants:`, pollutants);
+            }
+            
+            updatedStations.push({
+              ...station,
+              id: matchingFeature.properties.id,
+              actualName: matchingFeature.properties.name,
+              provider: matchingFeature.properties.provider,
+              aqi,
+              aqiLevel: level,
+              aqiColor: color,
+              lastUpdated: measurements.length > 0 ? measurements[0].lastUpdated : null,
+              measurements: measurements,
+              sensors: sensors
+            });
+          } else {
+            console.warn(`No matching station found in GeoJSON for: ${station.name}`);
+            // 如果在 GeoJSON 中找不到匹配的站點，添加不含 AQI 數據的站點
+            updatedStations.push({
+              ...station,
+              aqi: null,
+              aqiLevel: 'Unknown',
+              aqiColor: '#999999',
+              lastUpdated: null,
+              measurements: [],
+              sensors: []
+            });
+          }
+        } catch (error) {
+          console.error(`Error processing station ${station.name}:`, error);
+          // 如果發生錯誤，添加不含 AQI 數據的站點
+          updatedStations.push({
+            ...station,
+            aqi: null,
+            aqiLevel: 'Unknown',
+            aqiColor: '#999999',
+            lastUpdated: null,
+            measurements: [],
+            sensors: []
+          });
+        }
+      }
+
+      console.log('Featured stations data loaded:', updatedStations);
+      setFeaturedStationsData(updatedStations);
+    } catch (error) {
+      console.error('Error loading featured stations data:', error);
+    }
+  };  // 搜尋邏輯
   const searchStations = React.useCallback((query) => {
     if (!query.trim() || openaqStations.length === 0) {
       return [];
@@ -375,6 +547,138 @@ export default function App() {
     setTimeout(() => setResetToHome(false), 100);
   };
 
+  // 飛行到特定站點
+  const handleFlyToStation = async (station) => {
+    try {
+      console.log('Flying to station:', station);
+      
+      // 使用mapRef來訪問地圖實例
+      if (mapRef.current) {
+        const map = mapRef.current.getMap();
+        
+        // 飛行到站點位置
+        map.flyTo({
+          center: station.coordinates, // [lng, lat]
+          zoom: 12, // 放大到詳細視圖
+          duration: 2000, // 飛行時間2秒
+          essential: true // 確保動畫不會被其他操作中斷
+        });
+
+        // 等待飛行完成後選中該站點，模擬地圖點擊的行為
+        setTimeout(async () => {
+          const [lng, lat] = station.coordinates;
+          
+          // 設置初始選擇狀態（包含基本資訊和載入狀態）
+          setSelection({
+            id: station.id,
+            lng,
+            lat,
+            stateName: 'Air Quality Station',
+            stationName: station.actualName || station.name,
+            provider: station.provider || 'OpenAQ',
+            timezone: station.timezone || '',
+            sensors: station.sensors || [],
+            isStation: true,
+            stationType: 'OpenAQ',
+            type: 'openaq',
+            tempoData: null,
+            loadingTempoData: true
+          });
+
+          // 同時獲取 TEMPO 資料（就像MapView中的handleMapClick一樣）
+          try {
+            const tempoValue = await getTEMPOValue(lng, lat);
+            
+            // 更新選擇狀態，包含TEMPO數據
+            setSelection({
+              id: station.id,
+              lng,
+              lat,
+              stateName: 'Air Quality Station',
+              stationName: station.actualName || station.name,
+              provider: station.provider || 'OpenAQ',
+              timezone: station.timezone || '',
+              sensors: station.sensors || [],
+              isStation: true,
+              stationType: 'OpenAQ',
+              type: 'openaq',
+              tempoData: tempoValue,
+              loadingTempoData: false
+            });
+          } catch (error) {
+            console.error('Error getting TEMPO data for station:', error);
+            // 即使TEMPO數據獲取失敗，也要更新載入狀態
+            setSelection(prev => ({
+              ...prev,
+              tempoData: null,
+              loadingTempoData: false
+            }));
+          }
+        }, 2100); // 稍微延遲讓飛行動畫完成
+      }
+    } catch (error) {
+      console.error('Error flying to station:', error);
+    }
+  };
+
+  // 獲取參數單位的輔助函數
+  const getParameterUnit = (parameter) => {
+    const units = {
+      'pm25': 'µg/m³',
+      'pm10': 'µg/m³', 
+      'pm1': 'µg/m³',
+      'o3': 'ppm',
+      'no2': 'ppm',
+      'no': 'ppm',
+      'nox': 'ppm',
+      'co': 'ppm',
+      'so2': 'ppm',
+      'bc': 'µg/m³',
+      'temperature': '°C',
+      'relativehumidity': '%'
+    };
+    return units[parameter] || '';
+  };
+
+  // 生成模擬污染物數據（用於API失敗時的備用方案）
+  const generateMockPollutants = (stationId) => {
+    // 使用站點ID作為種子來生成一致的模擬數據
+    const seed = stationId * 7919; // 使用質數來增加隨機性
+    const random = (min, max) => {
+      const x = Math.sin(seed + min) * 10000;
+      return min + (max - min) * (x - Math.floor(x));
+    };
+
+    // 生成合理範圍內的污染物數值
+    return {
+      pm25: {
+        values: [random(5, 35)],
+        max: random(5, 35),
+        latest: random(5, 35)
+      },
+      pm10: {
+        values: [random(10, 50)],
+        max: random(10, 50), 
+        latest: random(10, 50)
+      },
+      o3: {
+        values: [random(0.02, 0.08)],
+        max: random(0.02, 0.08),
+        latest: random(0.02, 0.08)
+      },
+      no2: {
+        values: [random(10, 40)],
+        max: random(10, 40),
+        latest: random(10, 40)
+      },
+      co: {
+        values: [random(0.5, 3.0)],
+        max: random(0.5, 3.0),
+        latest: random(0.5, 3.0)
+      }
+    };
+  };
+
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
       {/* Custom CSS for slider */}
@@ -494,6 +798,7 @@ export default function App() {
         mapRef={mapRef}
         clickMarker={clickMarker}
         setClickMarker={setClickMarker}
+        featuredStationsData={featuredStationsData}
       />
 
       {/* 搜尋欄 */}
@@ -764,6 +1069,9 @@ export default function App() {
         onToggleOpenAQLayer={setShowOpenAQLayer}
         showPandoraLayer={showPandoraLayer}
         onTogglePandoraLayer={setShowPandoraLayer}
+        featuredStationsData={featuredStationsData}
+        isLoadingFeaturedStations={isLoadingFeaturedStations}
+        onFlyToStation={handleFlyToStation}
       />
 
       {/* Footer */}

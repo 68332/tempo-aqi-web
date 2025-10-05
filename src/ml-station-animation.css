@@ -32,6 +32,38 @@
   }
 }
 
+/* 重要站點的擴散動畫 - 紅色主題 */
+@keyframes featured-ripple {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* 重要站點的核心脈衝動畫 */
+@keyframes featured-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 /* 為 MapLibre 圖層添加動畫 - 使用全域樣式 */
 .maplibregl-canvas-container {
   position: relative;
@@ -56,4 +88,21 @@
 
 [layer-id="ml-station-main"] {
   animation: pulse-main 2s infinite;
+}
+
+/* 重要站點動畫 */
+[layer-id="featured-station-ripple-1"] {
+  animation: featured-ripple 3s infinite;
+}
+
+[layer-id="featured-station-ripple-2"] {
+  animation: featured-ripple 3s infinite 0.8s;
+}
+
+[layer-id="featured-station-ripple-3"] {
+  animation: featured-ripple 3s infinite 1.6s;
+}
+
+[layer-id="featured-station-core"] {
+  animation: featured-pulse 2s infinite;
 }

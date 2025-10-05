@@ -4,9 +4,64 @@ import { Map, Source, Layer } from '@vis.gl/react-maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './ml-station-animation.css'; // 導入 ML 站點動畫樣式
 import { getAssetPath } from './lib/constants.js';
+import { getAQIInfo } from './utils/aqiUtils.js';
 
 // US border geo json from: https://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_040_00_500k.json
 // exclude: Alaska, Hawaii, Puerto Rico
+
+// 重要的完整監測站點定義
+const FEATURED_STATIONS = [
+  {
+    id: 739,
+    name: "McMillan Reservoir",
+    coordinates: [-77.013176, 38.921848]
+  },
+  {
+    id: 162,
+    name: "Houston Deer Park C3",
+    coordinates: [-95.128508, 29.670025]
+  },
+  {
+    id: 1226,
+    name: "Grand Rapids",
+    coordinates: [-85.67109700000002, 42.984699]
+  },
+  {
+    id: 2183,
+    name: "Denver - CAMP",
+    coordinates: [-104.987198, 39.751099]
+  },
+  {
+    id: 1938,
+    name: "Seattle-Beacon Hill",
+    coordinates: [-122.308628, 47.568236000000006]
+  },
+  {
+    id: 605,
+    name: "Phoenix JLG Supersit",
+    coordinates: [-112.09500100000001, 33.503601]
+  },
+  {
+    id: 448,
+    name: "Boston - Roxbury",
+    coordinates: [-71.082497, 42.329399]
+  },
+  {
+    id: 221,
+    name: "Indpls-Washington Pa",
+    coordinates: [-86.114444, 39.810833]
+  },
+  {
+    id: 7936,
+    name: "Los Angeles - N. Mai",
+    coordinates: [-118.22675500000001, 34.066429]
+  },
+  {
+    id: 2135,
+    name: "Oakland West",
+    coordinates: [-122.28240200000002, 37.8148]
+  }
+];
 
 export default function MapView({ 
   onSelect, 
@@ -18,7 +73,8 @@ export default function MapView({
   onZoomChange, 
   mapRef,
   clickMarker,
-  setClickMarker
+  setClickMarker,
+  featuredStationsData
 }) {
   // 管理地圖引用
   const internalMapRef = React.useRef(null);
@@ -38,6 +94,20 @@ export default function MapView({
     return () => clearInterval(interval);
   }, []);
 
+  // 監聽 featuredStationsData 變化並觸發地圖重新渲染
+  React.useEffect(() => {
+    if (actualMapRef.current && featuredStationsData) {
+      console.log('Featured stations data updated, triggering map re-render:', featuredStationsData);
+      
+      // 強制觸發地圖重新渲染動畫層
+      const map = actualMapRef.current.getMap();
+      if (map && map.loaded()) {
+        // 觸發重新繪製
+        map.triggerRepaint();
+      }
+    }
+  }, [featuredStationsData]);
+
   // 計算動畫數值
   const getAnimatedOpacity = (phase, offset = 0) => {
     const cycle = (animationTime + offset) % 3; // 3秒循環
@@ -51,6 +121,54 @@ export default function MapView({
   const getAnimatedRadius = (baseSize, amplitude, offset = 0) => {
     const cycle = (animationTime + offset) % 3;
     return baseSize + Math.sin(cycle * 2 * Math.PI) * amplitude;
+  };
+
+  // 獲取重要站點的顏色
+  const getStationColor = (stationId, opacity = 1) => {
+    if (featuredStationsData && Array.isArray(featuredStationsData) && featuredStationsData.length > 0) {
+      const stationData = featuredStationsData.find(station => station && station.id === stationId);
+      if (stationData && stationData.aqiColor) {
+        // 使用AQI顏色，調整不透明度
+        const color = stationData.aqiColor;
+        // 將hex顏色轉換為rgba
+        const hexToRgba = (hex, alpha) => {
+          const r = parseInt(hex.slice(1, 3), 16);
+          const g = parseInt(hex.slice(3, 5), 16);
+          const b = parseInt(hex.slice(5, 7), 16);
+          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        };
+        return hexToRgba(color, opacity);
+      }
+    }
+    // 預設為紅色（如果沒有AQI數據）
+    return `rgba(220, 38, 38, ${opacity})`;
+  };
+
+  // 創建MapLibre顏色表達式
+  const createColorExpression = (defaultColor = "#DC2626") => {
+    if (!featuredStationsData || !Array.isArray(featuredStationsData) || featuredStationsData.length === 0) {
+      console.log('createColorExpression: No valid featured stations data, using default color');
+      return defaultColor;
+    }
+
+    // 創建基於站點ID的條件表達式
+    const expression = ["case"];
+    let addedStations = 0;
+    
+    featuredStationsData.forEach(station => {
+      if (station && station.id && station.aqiColor) {
+        expression.push(["==", ["get", "id"], station.id]);
+        expression.push(station.aqiColor);
+        addedStations++;
+        console.log(`Added color mapping: Station ${station.id} -> ${station.aqiColor}`);
+      }
+    });
+    
+    // 預設顏色
+    expression.push(defaultColor);
+    
+    console.log(`createColorExpression: Created expression with ${addedStations} station color mappings`);
+    return expression;
   };
 
   // 添加地圖載入事件監聽器
@@ -977,12 +1095,12 @@ export default function MapView({
             }}
           />
           
-          {/* 特殊站點 (id 221) - 最大外圈 */}
+          {/* 重要站點 - 最大外圈動畫 */}
           <Layer
             id="ml-station-ripple-largest"
             type="circle"
             source="openaq-us-stations"
-            filter={["==", ["get", "id"], 221]}
+            filter={["in", ["get", "id"], ["literal", [739, 162, 1226, 2183, 1938, 605, 448, 221, 7936, 2135]]]}
             paint={{
               "circle-radius": [
                 "interpolate",
@@ -992,20 +1110,20 @@ export default function MapView({
                 8, 65 + Math.sin(animationTime * 1.5) * 15,
                 15, 90 + Math.sin(animationTime * 1.5) * 20
               ],
-              "circle-color": "#EF4444",
+              "circle-color": createColorExpression("#EF4444"),
               "circle-opacity": Math.max(0.05, 0.15 + Math.sin(animationTime * 2) * 0.1),
               "circle-stroke-width": 1,
-              "circle-stroke-color": "#EF4444",
+              "circle-stroke-color": createColorExpression("#EF4444"),
               "circle-stroke-opacity": Math.max(0.1, 0.25 + Math.sin(animationTime * 2) * 0.15)
             }}
           />
           
-          {/* 特殊站點 (id 221) - 大外圈 */}
+          {/* 重要站點 - 大外圈動畫 */}
           <Layer
             id="ml-station-ripple-large"
             type="circle"
             source="openaq-us-stations"
-            filter={["==", ["get", "id"], 221]}
+            filter={["in", ["get", "id"], ["literal", [739, 162, 1226, 2183, 1938, 605, 448, 221, 7936, 2135]]]}
             paint={{
               "circle-radius": [
                 "interpolate",
@@ -1015,20 +1133,20 @@ export default function MapView({
                 8, 45 + Math.sin(animationTime * 1.8 + 1) * 12,
                 15, 65 + Math.sin(animationTime * 1.8 + 1) * 15
               ],
-              "circle-color": "#EF4444",
+              "circle-color": createColorExpression("#EF4444"),
               "circle-opacity": Math.max(0.08, 0.2 + Math.sin(animationTime * 2.2 + 1) * 0.12),
               "circle-stroke-width": 1,
-              "circle-stroke-color": "#EF4444",
+              "circle-stroke-color": createColorExpression("#EF4444"),
               "circle-stroke-opacity": Math.max(0.15, 0.3 + Math.sin(animationTime * 2.2 + 1) * 0.15)
             }}
           />
           
-          {/* 特殊站點 (id 221) - 中外圈 */}
+          {/* 重要站點 - 中外圈動畫 */}
           <Layer
             id="ml-station-ripple-medium"
             type="circle"
             source="openaq-us-stations"
-            filter={["==", ["get", "id"], 221]}
+            filter={["in", ["get", "id"], ["literal", [739, 162, 1226, 2183, 1938, 605, 448, 221, 7936, 2135]]]}
             paint={{
               "circle-radius": [
                 "interpolate",
@@ -1038,20 +1156,20 @@ export default function MapView({
                 8, 30 + Math.sin(animationTime * 2.1 + 2) * 8,
                 15, 42 + Math.sin(animationTime * 2.1 + 2) * 12
               ],
-              "circle-color": "#EF4444",
+              "circle-color": createColorExpression("#EF4444"),
               "circle-opacity": Math.max(0.1, 0.25 + Math.sin(animationTime * 2.5 + 2) * 0.15),
               "circle-stroke-width": 2,
-              "circle-stroke-color": "#DC2626",
+              "circle-stroke-color": createColorExpression("#DC2626"),
               "circle-stroke-opacity": Math.max(0.2, 0.4 + Math.sin(animationTime * 2.5 + 2) * 0.2)
             }}
           />
           
-          {/* 特殊站點 (id 221) - 小外圈 */}
+          {/* 重要站點 - 小外圈動畫 */}
           <Layer
             id="ml-station-ripple-small"
             type="circle"
             source="openaq-us-stations"
-            filter={["==", ["get", "id"], 221]}
+            filter={["in", ["get", "id"], ["literal", [739, 162, 1226, 2183, 1938, 605, 448, 221, 7936, 2135]]]}
             paint={{
               "circle-radius": [
                 "interpolate",
@@ -1061,20 +1179,20 @@ export default function MapView({
                 8, 18 + Math.sin(animationTime * 2.4 + 3) * 6,
                 15, 25 + Math.sin(animationTime * 2.4 + 3) * 8
               ],
-              "circle-color": "#EF4444",
+              "circle-color": createColorExpression("#EF4444"),
               "circle-opacity": Math.max(0.15, 0.3 + Math.sin(animationTime * 2.8 + 3) * 0.2),
               "circle-stroke-width": 2,
-              "circle-stroke-color": "#DC2626",
+              "circle-stroke-color": createColorExpression("#DC2626"),
               "circle-stroke-opacity": Math.max(0.25, 0.45 + Math.sin(animationTime * 2.8 + 3) * 0.25)
             }}
           />
           
-          {/* 特殊站點 (id 221) - 主要圓圈 */}
+          {/* 重要站點 - 主要圓圈 */}
           <Layer
             id="ml-station-main"
             type="circle"
             source="openaq-us-stations"
-            filter={["==", ["get", "id"], 221]}
+            filter={["in", ["get", "id"], ["literal", [739, 162, 1226, 2183, 1938, 605, 448, 221, 7936, 2135]]]}
             paint={{
               "circle-radius": [
                 "interpolate",
@@ -1084,19 +1202,19 @@ export default function MapView({
                 8, 10 + Math.sin(animationTime * 3) * 2,
                 15, 16 + Math.sin(animationTime * 3) * 3
               ],
-              "circle-color": "#DC2626",
+              "circle-color": createColorExpression("#DC2626"),
               "circle-stroke-color": "#FFFFFF",
               "circle-stroke-width": 3,
               "circle-opacity": 0.8 + Math.sin(animationTime * 3) * 0.15
             }}
           />
           
-          {/* 特殊站點 (id 221) - 中心高亮點 */}
+          {/* 重要站點 - 中心高亮點 */}
           <Layer
             id="ml-station-center"
             type="circle"
             source="openaq-us-stations"
-            filter={["==", ["get", "id"], 221]}
+            filter={["in", ["get", "id"], ["literal", [739, 162, 1226, 2183, 1938, 605, 448, 221, 7936, 2135]]]}
             paint={{
               "circle-radius": [
                 "interpolate",

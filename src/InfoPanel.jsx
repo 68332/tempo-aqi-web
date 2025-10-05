@@ -23,7 +23,10 @@ export default function InfoPanel({
   showOpenAQLayer, 
   onToggleOpenAQLayer, 
   showPandoraLayer, 
-  onTogglePandoraLayer 
+  onTogglePandoraLayer,
+  featuredStationsData,
+  isLoadingFeaturedStations,
+  onFlyToStation
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -880,8 +883,81 @@ export default function InfoPanel({
               </Typography>
             </Box>
             
+            {/* Featured Monitoring Stations */}
+            <Typography variant="subtitle2" fontWeight="600" sx={{ mb: 1 }}>
+              Featured Monitoring Stations
+            </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Click anywhere on the map to explore local air quality data from these monitoring stations.
+              Key air quality monitoring locations with comprehensive sensor coverage:
+            </Typography>
+            
+            {isLoadingFeaturedStations ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : (
+              <Box sx={{ mb: 2 }}>
+                {featuredStationsData && featuredStationsData.length > 0 ? (
+                  featuredStationsData.map((station, index) => (
+                    <Box
+                      key={station.id}
+                      sx={{
+                        border: '1px solid',
+                        borderColor: station.aqiColor || '#e0e0e0',
+                        borderRadius: 2,
+                        p: 2,
+                        mb: 1,
+                        cursor: 'pointer',
+                        backgroundColor: 'background.paper',
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                          transform: 'translateY(-1px)',
+                          boxShadow: 1
+                        },
+                        transition: 'all 0.2s ease-in-out'
+                      }}
+                      onClick={() => onFlyToStation && onFlyToStation(station)}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Typography variant="subtitle2" fontWeight="600">
+                          {station.actualName || station.name}
+                        </Typography>
+                        {station.aqi !== null && (
+                          <Chip
+                            label={`AQI ${station.aqi}`}
+                            size="small"
+                            sx={{
+                              backgroundColor: station.aqiColor,
+                              color: station.aqiColor === '#FFFF00' ? '#000000' : '#FFFFFF',
+                              fontWeight: 'bold',
+                              fontSize: '0.75rem'
+                            }}
+                          />
+                        )}
+                      </Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                        ID: {station.id}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {station.coordinates[1].toFixed(3)}, {station.coordinates[0].toFixed(3)}
+                      </Typography>
+                      {station.aqi !== null && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                          {station.aqiLevel} • {station.measurements?.length || 0} sensors active
+                        </Typography>
+                      )}
+                    </Box>
+                  ))
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No featured stations available
+                  </Typography>
+                )}
+              </Box>
+            )}
+            
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Click anywhere on the map to explore local air quality data from monitoring stations.
             </Typography>
           </Box>
         ) : (
