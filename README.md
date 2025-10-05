@@ -52,7 +52,7 @@ The platform transforms complex Earth observation data into actionable insights,
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        Cloudflare Worker                                    │
+│                        Cloudflare Worker (CORS proxy)                       │
 └─────────────────┬───────────────────┬─────────────────────┬─────────────────┘
                   │                   │                     │
                   ▼                   ▼                     ▼
