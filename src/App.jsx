@@ -8,6 +8,7 @@ export default function App() {
   const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 900);
   const [resetToHome, setResetToHome] = React.useState(false);
   const [currentZoom, setCurrentZoom] = React.useState(3.6);
+  const [searchQuery, setSearchQuery] = React.useState('');
   const mapRef = React.useRef(null);
   
   // 圖層顯示控制狀態
@@ -140,6 +141,97 @@ export default function App() {
         onZoomChange={setCurrentZoom}
         mapRef={mapRef}
       />
+
+      {/* 搜尋欄 */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 10,
+          width: isMobile ? '90%' : '400px',
+          maxWidth: '400px'
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(8px)',
+            borderRadius: '25px',
+            padding: '8px 20px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#6b7280"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <input
+            type="text"
+            placeholder="Search locations, cities, or stations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              flex: 1,
+              border: 'none',
+              outline: 'none',
+              backgroundColor: 'transparent',
+              fontSize: '14px',
+              color: '#374151',
+              fontFamily: 'system-ui, -apple-system, sans-serif'
+            }}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                // TODO: 實作搜尋功能
+                console.log('Searching for:', searchQuery);
+              }
+            }}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              style={{
+                border: 'none',
+                background: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#9ca3af"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* 右側資訊面板（浮在地圖上） */}
       <InfoPanel

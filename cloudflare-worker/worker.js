@@ -64,7 +64,7 @@ async function handleApiRequest(request, url) {
     if (targetPath.startsWith('/ml/')) {
       // ML API 代理 - 暫時回到直接使用 IP，等網域設定完成後再改回來
       const mlPath = targetPath.replace('/ml', '');
-      targetUrl = `https://aircast.jylin.dev:8000/${mlPath}${url.search}`;
+      targetUrl = `http://aircastml.jylin.dev${mlPath}${url.search}`;
     } else if (targetPath.startsWith('/openaq/')) {
       // OpenAQ API 代理
       const openaqPath = targetPath.replace('/openaq', '');
